@@ -1,19 +1,14 @@
-<!doctype html><html lang="pt-BR"><head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-3KM3SHVBF0"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3KM3SHVBF0');
-</script>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Testes Psicológicos</title>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Testes Psicológicos</title>
 <style>
 :root{--bg:#0b1118;--surface:#121a23;--surface2:#17222e;--text:#e8edf3;--muted:#9ba8b6;--line:#2a3745;--navy:#163a5f;--blue:#2d6594;--steel:#52728c;--green:#37745d;--red:#8f3d3d}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,Segoe UI,Arial;background:linear-gradient(180deg,#0b1118 0%,#111923 100%);color:var(--text);min-height:100vh}
 header{background:#0b1118f2;border-bottom:1px solid var(--line);padding:16px;position:sticky;top:0;z-index:10}
 .wrap,main{max-width:1100px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center}.brand{font-weight:900;letter-spacing:.4px}
-.ghost,.secondary,.primary,.danger{border:0;border-radius:9px;padding:11px 14px;font-weight:800;cursor:pointer}.ghost,.secondary{background:#18232e;color:var(--text);border:1px solid var(--line)}.primary{background:#24527a;color:#fff}.danger{background:#3a2022;color:#f2c6c6;border:1px solid #63383c}.suggest-link{display:inline-block;text-decoration:none;text-align:center}
+.header-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.live-clock{min-width:185px;text-align:center;font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;letter-spacing:.2px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#101923;color:#e8edf3;white-space:nowrap}
+@media(max-width:720px){.header-right{gap:6px}.live-clock{min-width:auto;font-size:11px;padding:8px 7px}.brand{max-width:42%}}
+@media(max-width:390px){.live-clock{font-size:10px;padding:7px 5px}.brand{font-size:13px!important}}
+.ghost,.secondary,.primary,.danger{border:0;border-radius:9px;padding:11px 14px;font-weight:800;cursor:pointer}.ghost,.secondary{background:#18232e;color:var(--text);border:1px solid var(--line)}.primary{background:#24527a;color:#fff}.danger{background:#3a2022;color:#f2c6c6;border:1px solid #63383c}
 main{padding:28px 16px 50px}.screen{display:none}.screen.active{display:block}.hero{text-align:center;padding:26px 20px 32px}.hero h1{font-size:clamp(34px,7vw,56px);margin:0;color:#eef3f8;letter-spacing:1px}.hero p,.note{color:var(--muted)}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.cardbtn{border:1px solid #314252;border-radius:15px;padding:25px;text-align:left;color:#fff;min-height:155px;cursor:pointer;background:linear-gradient(145deg,#17232f,#111a23);box-shadow:0 10px 25px #0005;transition:.18s}.cardbtn:hover{transform:translateY(-2px);border-color:#58738d;background:linear-gradient(145deg,#1b2b3a,#14202b)}.cardbtn h2{font-size:25px;margin:0 0 7px}.cardbtn p{color:#aab6c2}
 .eata,.ifp,.bfp,.neo{background:linear-gradient(145deg,#17314a,#111b25)}.eata{border-left:4px solid #416f99}.ifp{border-left:4px solid #59758d}.bfp{border-left:4px solid #3f725f}.neo{border-left:4px solid #315f87}
@@ -77,7 +72,7 @@ button{touch-action:manipulation;cursor:pointer;-webkit-tap-highlight-color:rgba
 }
 
 
-</style></head><body><header><div class="wrap top"><div class="brand">🧠 Testes Psicológicos</div><button id="homeBtn" class="ghost hidden">← Início</button></div></header><main>
+</style></head><body><header><div class="wrap top"><div class="brand">🧠 Testes Psicológicos</div><div class="header-right"><button id="homeBtn" class="ghost hidden">← Início</button><div id="liveClock" class="live-clock" aria-label="Data e hora atuais">--/--/---- --:--:--</div></div></div></header><main>
 <section id="home" class="screen active"><div class="hero"><h1>Testes Psicológicos</h1><p>Treino, correção automática e histórico de evolução.</p></div>
 <div id="dashboard" class="dashboard"></div>
 <div id="resumeArea"></div>
@@ -87,7 +82,7 @@ button{touch-action:manipulation;cursor:pointer;-webkit-tap-highlight-color:rgba
   <div><b>📊 Histórico Geral</b><div class="note">Visão agregada de todos os testes realizados.</div></div>
   <button class="primary" data-open="generalhist">Abrir histórico</button>
 </div>
-<div class="panel config"><div><b>⚙️ Configurações</b><div class="note">Preferências e gerenciamento de dados.</div></div><button class="secondary" data-open="settings">Abrir</button></div><div class="panel config"><div><b>💡 Sugestões</b><div class="note">Envie uma sugestão para melhorar a ferramenta.</div></div><a class="secondary suggest-link" href="https://docs.google.com/forms/d/e/1FAIpQLSe___c2KPu61E_MqNNRnoOaDf815_oNakMIAv6hR8Ca1NK7zw/viewform?usp=header" target="_blank" rel="noopener noreferrer" onclick="if(typeof gtag==='function')gtag('event','clique_sugestao',{'event_category':'engajamento'});">Abrir</a></div></section>
+<div class="panel config"><div><b>⚙️ Configurações</b><div class="note">Preferências e gerenciamento de dados.</div></div><button class="secondary" data-open="settings">Abrir</button></div></section>
 <section id="work" class="screen"><div id="app"></div></section><section id="generalhist" class="screen"><div id="generalHistApp"></div></section><section id="settings" class="screen"><div class="panel"><h1>⚙️ Configurações</h1></div><div class="settings">
 <div class="panel">
   <b>👤 Perfil padrão</b>
@@ -104,6 +99,17 @@ button{touch-action:manipulation;cursor:pointer;-webkit-tap-highlight-color:rgba
 </div>
 <div class="panel"><label><input id="keep" type="checkbox" style="width:auto"> Manter nome/idade após calcular</label></div><div class="panel"><label><input id="autoclear" type="checkbox" style="width:auto"> Limpar respostas automaticamente</label></div><div class="panel"><b>Históricos</b><p class="note">Apaga EATA, IFP, BFP, NEO PI-R e NEO FFI-R.</p><button id="wipe" class="danger">Apagar todos</button></div><div class="panel"><b>Armazenamento</b><p class="note">Os históricos ficam salvos localmente neste navegador.</p></div></div></section></main>
 <script>
+function updateLiveClock(){
+  const el=document.getElementById('liveClock');
+  if(!el)return;
+  const now=new Date();
+  const date=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const time=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  el.textContent='📅 '+date+'  🕐 '+time;
+}
+updateLiveClock();
+setInterval(updateLiveClock,1000);
+
 const memoryStore={};
 const store={
  getItem(k){try{return window.localStorage.getItem(k)}catch(e){return Object.prototype.hasOwnProperty.call(memoryStore,k)?memoryStore[k]:null}},
