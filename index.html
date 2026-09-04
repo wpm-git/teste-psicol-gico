@@ -73,6 +73,374 @@ button{touch-action:manipulation;cursor:pointer;-webkit-tap-highlight-color:rgba
 }
 
 
+
+/* ===== REFINAMENTO VISUAL · TEMA INSTITUCIONAL/POLICIAL ===== */
+:root{
+  --ui-bg:#0b1118;
+  --ui-panel:#111c27;
+  --ui-panel-2:#172635;
+  --ui-blue:#174d78;
+  --ui-blue-light:#2b78ad;
+  --ui-gold:#b18a3a;
+  --ui-text:#e7edf3;
+  --ui-muted:#94a3b3;
+  --ui-success:#2e8b57;
+  --ui-danger:#b43c3c;
+  --ui-border:rgba(148,163,179,.18);
+  --ui-shadow:0 10px 28px rgba(0,0,0,.24);
+}
+
+html{scroll-behavior:smooth}
+
+body{
+  background:
+    radial-gradient(circle at 15% 0%, rgba(23,77,120,.18), transparent 34%),
+    linear-gradient(180deg,#0d151e 0%,var(--ui-bg) 55%,#080d12 100%) !important;
+  color:var(--ui-text);
+  min-height:100vh;
+}
+
+header{
+  border-bottom:1px solid var(--ui-border);
+  box-shadow:0 8px 30px rgba(0,0,0,.18);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+.cardbtn{
+  position:relative;
+  overflow:hidden;
+  min-height:118px;
+  border:1px solid var(--ui-border) !important;
+  border-radius:14px !important;
+  box-shadow:0 7px 20px rgba(0,0,0,.16);
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease,
+             filter .2s ease !important;
+}
+
+.cardbtn::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(120deg,transparent 15%,rgba(255,255,255,.055),transparent 65%);
+  transform:translateX(-120%);
+  transition:transform .45s ease;
+  pointer-events:none;
+}
+
+.cardbtn:hover{
+  transform:translateY(-4px);
+  border-color:rgba(43,120,173,.55) !important;
+  box-shadow:var(--ui-shadow);
+  filter:brightness(1.06);
+}
+
+.cardbtn:hover::after{transform:translateX(120%)}
+.cardbtn:active{transform:translateY(-1px) scale(.995)}
+
+.cardbtn h2{
+  margin-bottom:8px !important;
+  letter-spacing:.2px;
+}
+
+.cardbtn p{
+  color:var(--ui-muted) !important;
+  line-height:1.45;
+}
+
+.suggestions{
+  background:linear-gradient(145deg,#292617,#171a1d) !important;
+  border-left:4px solid var(--ui-gold) !important;
+}
+
+.suggestions:hover{
+  border-color:rgba(177,138,58,.75) !important;
+  border-left-color:var(--ui-gold) !important;
+}
+
+button, input, select, textarea{
+  font:inherit;
+}
+
+button{
+  transition:transform .16s ease, filter .16s ease, box-shadow .16s ease;
+}
+
+button:not(.cardbtn):hover{
+  filter:brightness(1.08);
+}
+
+input, select, textarea{
+  border-radius:9px !important;
+  border:1px solid var(--ui-border) !important;
+  outline:none;
+  transition:border-color .18s ease, box-shadow .18s ease;
+}
+
+input:focus, select:focus, textarea:focus{
+  border-color:var(--ui-blue-light) !important;
+  box-shadow:0 0 0 3px rgba(43,120,173,.14);
+}
+
+section, .panel, .box, .result, .history-item{
+  border-color:var(--ui-border);
+}
+
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:#0a1016}
+::-webkit-scrollbar-thumb{
+  background:#2b3c4c;
+  border:2px solid #0a1016;
+  border-radius:10px;
+}
+::-webkit-scrollbar-thumb:hover{background:#3c566d}
+
+@media (max-width:900px){
+  .cards,.grid,.card-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+}
+
+@media (max-width:620px){
+  body{font-size:15px}
+  .cards,.grid,.card-grid{
+    grid-template-columns:1fr !important;
+  }
+  .cardbtn{min-height:105px}
+  header{position:relative}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    scroll-behavior:auto !important;
+    transition:none !important;
+    animation:none !important;
+  }
+}
+
+
+/* ===== V2 · MUDANÇA VISUAL MAIS MARCANTE ===== */
+:root{
+  --bg:#071019 !important;
+  --surface:#0f1b27 !important;
+  --surface2:#142536 !important;
+  --text:#f1f5f9 !important;
+  --muted:#9fb0bf !important;
+  --line:#294158 !important;
+  --navy:#0f3556 !important;
+  --blue:#1f6fa8 !important;
+  --steel:#5e7f98 !important;
+  --green:#2f7d61 !important;
+  --red:#a34646 !important;
+  --gold:#c59a46;
+}
+
+body{
+  background:
+    linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),
+    radial-gradient(circle at 50% -15%,rgba(31,111,168,.34),transparent 38%),
+    #071019 !important;
+  background-size:34px 34px,34px 34px,auto,auto !important;
+}
+
+header{
+  background:linear-gradient(90deg,#071019 0%,#0d2132 50%,#071019 100%) !important;
+  border-bottom:2px solid rgba(197,154,70,.72) !important;
+  box-shadow:0 8px 28px rgba(0,0,0,.42) !important;
+}
+
+.brand{
+  color:#fff !important;
+  text-transform:uppercase;
+  letter-spacing:1.2px !important;
+  text-shadow:0 0 18px rgba(31,111,168,.28);
+}
+
+.live-clock{
+  background:#0a1621 !important;
+  border:1px solid #35526b !important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+}
+
+.hero{
+  padding:38px 20px 34px !important;
+}
+
+.hero h1{
+  font-size:clamp(36px,7vw,62px) !important;
+  color:#fff !important;
+  text-transform:uppercase;
+  letter-spacing:2px !important;
+  text-shadow:0 3px 20px rgba(0,0,0,.45);
+}
+
+.hero h1::after{
+  content:"";
+  display:block;
+  width:86px;
+  height:4px;
+  margin:15px auto 0;
+  border-radius:50px;
+  background:linear-gradient(90deg,var(--blue),var(--gold));
+}
+
+.hero p{
+  font-size:16px !important;
+  color:#b8c6d2 !important;
+}
+
+.grid{
+  gap:20px !important;
+}
+
+.cardbtn{
+  min-height:168px !important;
+  padding:28px !important;
+  border:1px solid #355068 !important;
+  border-left:5px solid #1f6fa8 !important;
+  border-radius:16px !important;
+  background:
+    linear-gradient(135deg,rgba(31,111,168,.17),transparent 45%),
+    linear-gradient(145deg,#132536,#0c1721) !important;
+  box-shadow:
+    0 13px 28px rgba(0,0,0,.33),
+    inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+
+.cardbtn::before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  height:3px;
+  background:linear-gradient(90deg,#1f6fa8,#4b9bd2,transparent);
+  opacity:.8;
+}
+
+.cardbtn:hover{
+  transform:translateY(-6px) scale(1.012) !important;
+  border-color:#4c7ca3 !important;
+  box-shadow:
+    0 20px 42px rgba(0,0,0,.42),
+    0 0 0 1px rgba(31,111,168,.16) !important;
+}
+
+.cardbtn h2{
+  color:#f8fafc !important;
+  font-size:27px !important;
+  letter-spacing:.3px;
+}
+
+.cardbtn p{
+  color:#aebdca !important;
+  font-size:14px;
+}
+
+.eata{border-left-color:#3d86bb !important}
+.ifp{border-left-color:#6f8ea5 !important}
+.bfp{border-left-color:#3d8b6b !important}
+.neo{border-left-color:#2f79ad !important}
+
+.suggestions{
+  border-left-color:var(--gold) !important;
+  background:
+    linear-gradient(135deg,rgba(197,154,70,.18),transparent 48%),
+    linear-gradient(145deg,#282315,#151614) !important;
+}
+
+.suggestions::before{
+  background:linear-gradient(90deg,var(--gold),#e6c77b,transparent) !important;
+}
+
+.panel{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.018),transparent),
+    #0f1b27 !important;
+  border:1px solid #294158 !important;
+  border-radius:15px !important;
+  box-shadow:0 10px 24px rgba(0,0,0,.20);
+}
+
+.tabs button{
+  background:#112232 !important;
+  border:1px solid #31506b !important;
+}
+
+.tabs .active{
+  background:linear-gradient(180deg,#2678ad,#18567f) !important;
+  box-shadow:0 5px 14px rgba(31,111,168,.22);
+}
+
+.primary{
+  background:linear-gradient(180deg,#277eb5,#175c88) !important;
+  box-shadow:0 6px 16px rgba(31,111,168,.23);
+}
+
+.secondary,.ghost{
+  background:#132433 !important;
+  border:1px solid #35526b !important;
+}
+
+.danger{
+  background:#3b2024 !important;
+  border:1px solid #78434a !important;
+}
+
+input,select,textarea{
+  background:#09141e !important;
+  border:1px solid #35526b !important;
+  color:#eef4f8 !important;
+}
+
+.q{
+  background:#0c1823 !important;
+  border:1px solid #294158 !important;
+}
+
+.opts label{
+  background:#132433 !important;
+  border:1px solid #35526b !important;
+}
+
+.opts input:checked + label{
+  background:linear-gradient(180deg,#277eb5,#18577f) !important;
+  border-color:#58a0cf !important;
+}
+
+.metric{
+  background:#0b1721 !important;
+  border:1px solid #294158 !important;
+  box-shadow:inset 3px 0 0 rgba(31,111,168,.65);
+}
+
+.metric strong{
+  color:#fff !important;
+}
+
+table{
+  background:#0b1721 !important;
+}
+
+th{
+  background:#14283a !important;
+  color:#eaf2f8 !important;
+}
+
+footer{
+  color:#71879a !important;
+}
+
+@media(max-width:720px){
+  .cardbtn{
+    min-height:130px !important;
+    padding:21px !important;
+  }
+  .cardbtn h2{font-size:22px !important}
+  .hero{padding-top:28px !important}
+}
+
 </style></head><body><header><div class="wrap top"><div class="brand">🧠 Testes Psicológicos</div><div class="header-right"><button id="homeBtn" class="ghost hidden">← Início</button><div id="liveClock" class="live-clock" aria-label="Data e hora atuais">--/--/---- --:--:--</div></div></div></header><main>
 <section id="home" class="screen active"><div class="hero"><h1>Testes Psicológicos</h1><p>Treino, correção automática e histórico de evolução.</p></div>
 <div id="dashboard" class="dashboard"></div>
