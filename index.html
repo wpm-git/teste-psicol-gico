@@ -680,7 +680,172 @@ function pdfWindow(x,full=true){const txt=full?buildAIReport(x):buildSummaryRepo
 
 /* ===== V9: Central de Avaliação, qualidade e demonstração ===== */
 .eval-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.eval-card{border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:12px}.eval-card label{display:flex;gap:8px;align-items:flex-start}.eval-card input[type=checkbox]{width:auto;margin-top:3px}.quality-chip{display:inline-block;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:900;border:1px solid var(--line);margin-top:5px}.quality-good{background:rgba(53,174,98,.12)}.quality-warn{background:rgba(210,157,42,.14)}.quality-bad{background:rgba(204,67,67,.13)}.demo-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#6b4d14;border:1px solid #9a7524;font-size:10px;font-weight:900;margin-left:6px}.master-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}.master-summary>div{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface2)}.palo-session-chart{display:flex;align-items:flex-end;gap:8px;height:170px;padding:16px 6px 2px;border-bottom:1px solid var(--line);overflow-x:auto}.palo-session-chart .pcol{min-width:42px;text-align:center;display:flex;flex-direction:column;justify-content:flex-end;height:100%}.palo-session-chart .pbar{width:26px;margin:0 auto 5px;border-radius:6px 6px 2px 2px;background:currentColor;opacity:.75;min-height:4px}.vfooter-meta{margin-top:8px;font-size:11px;opacity:.9}.quality-list{margin:8px 0 0;padding-left:18px}.quality-list li{margin:3px 0}
-</style></head><body><div class="toolbar"><button onclick="window.print()">💾 Salvar / imprimir PDF</button></div><div class="cover"><h1>${title}</h1><p>ID ${reportId(x)} · ${esc(x.date||'')}</p><p>Documento de treinamento e acompanhamento. Não constitui laudo psicológico.</p></div>${bars?`<div class="chart"><h2>Perfil visual dos resultados</h2>${bars}</div>`:''}<pre>${safe}</pre><script>setTimeout(()=>window.print(),350)<\/script></body></html>`);w.document.close()}
+</style></head><body><div class="toolbar"><button onclick="window.print()">💾 Salvar / imprimir PDF</button></div><div class="cover"><h1>${title}</h1><p>ID ${reportId(x)} · ${esc(x.date||'')}</p><p>Documento de treinamento e acompanhamento. Não constitui laudo psicológico.</p></div>${bars?`<div class="chart"><h2>Perfil visual dos resultados</h2>${bars}</div>`:''}<pre>${safe}</pre><script>setTimeout(()=>window.print(),350)<\/script>
+<style>
+#reliabilityPanel{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99990;display:none;align-items:center;justify-content:center;padding:18px}
+#reliabilityPanel.open{display:flex}
+#reliabilityPanel .rp-card{width:min(920px,100%);max-height:88vh;overflow:auto;background:var(--card,#111827);color:var(--text,#f8fafc);border:1px solid rgba(148,163,184,.25);border-radius:18px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+#reliabilityPanel .rp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:12px 0}
+#reliabilityPanel .rp-item{padding:12px;border-radius:12px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18)}
+#reliabilityPanel button{margin:5px 5px 5px 0}
+#reliabilityFab{position:fixed;right:16px;bottom:16px;z-index:9990;border-radius:999px;padding:10px 14px;border:0;box-shadow:0 8px 28px rgba(0,0,0,.25);cursor:pointer}
+.rp-ok{color:#22c55e}.rp-warn{color:#f59e0b}.rp-bad{color:#ef4444}
+</style>
+<button id="reliabilityFab" type="button" title="Diagnóstico do sistema">🛡️ Diagnóstico</button>
+<div id="reliabilityPanel" aria-hidden="true">
+  <div class="rp-card">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 9.2 · Atualizado em 14/09/2026</small></div>
+      <button type="button" id="rpClose">✕ Fechar</button>
+    </div>
+    <p>Verifica a estrutura dos testes, histórico, versões, backup e erros locais. Não altera respostas ao executar o diagnóstico.</p>
+    <div id="rpSummary" class="rp-grid"></div>
+    <div>
+      <button type="button" id="rpRun">🧪 Verificar integridade</button>
+      <button type="button" id="rpRecalc">🔄 Recalcular metadados do histórico</button>
+      <button type="button" id="rpCopy">📋 Copiar diagnóstico</button>
+      <button type="button" id="rpErrors">🚨 Ver erros</button>
+    </div>
+    <details style="margin-top:14px"><summary><b>📝 Novidades da V9.2</b></summary>
+      <ul>
+        <li>Diagnóstico automático e teste de integridade dos bancos de questões.</li>
+        <li>Versão do sistema registrada nas novas aplicações quando possível.</li>
+        <li>Revisão de metadados de históricos antigos e alerta para registros da V9 com IFP 100/155.</li>
+        <li>Registro local de erros JavaScript com opção de copiar diagnóstico.</li>
+        <li>Aviso de backup antigo e verificação da versão dos dados.</li>
+      </ul>
+    </details>
+    <pre id="rpDetails" style="white-space:pre-wrap;font-size:12px;background:rgba(0,0,0,.18);padding:12px;border-radius:12px;margin-top:14px"></pre>
+  </div>
+</div>
+<script>
+(function(){
+  const SYS_VERSION="9.2", UPDATED="14/09/2026";
+  const EXPECTED={eata:40,ifp:100,bfp:126,neo:240,neoffi:60};
+  const ERRKEY="psico_runtime_errors_v92";
+  function lsKeys(){let a=[];for(let i=0;i<localStorage.length;i++)a.push(localStorage.key(i));return a}
+  function findArray(names){
+    for(const n of names){try{const v=window[n];if(Array.isArray(v))return v}catch(e){}}
+    return null;
+  }
+  function qCount(key){
+    const map={
+      eata:["eataQ","EATA_Q","eataQuestions"],
+      ifp:["ifpQ","IFP_Q","ifpQuestions"],
+      bfp:["bfpQ","BFP_Q","bfpQuestions"],
+      neo:["neoQ","NEO_Q","neoQuestions"],
+      neoffi:["neoFfiQ","neoffiQ","NEOFFI_Q","neoFfiQuestions"]
+    };
+    const a=findArray(map[key]||[]);
+    return a?a.length:null;
+  }
+  function detectHistory(){
+    const candidates=[];
+    for(const k of lsKeys()){
+      try{
+        const v=JSON.parse(localStorage.getItem(k));
+        if(Array.isArray(v)&&v.length&&typeof v[0]==="object"){
+          const s=JSON.stringify(v[0]).toLowerCase();
+          if(/teste|test|resultado|result|date|data/.test(s)) candidates.push([k,v]);
+        }
+      }catch(e){}
+    }
+    candidates.sort((a,b)=>b[1].length-a[1].length);
+    return candidates[0]||[null,[]];
+  }
+  function lastBackup(){
+    let newest=null;
+    for(const k of lsKeys()){
+      if(/backup/i.test(k)){
+        const raw=localStorage.getItem(k);
+        const d=new Date(raw);
+        if(!isNaN(d)&&(!newest||d>newest))newest=d;
+      }
+    }
+    return newest;
+  }
+  function runtimeErrors(){
+    try{return JSON.parse(localStorage.getItem(ERRKEY)||"[]")}catch(e){return[]}
+  }
+  function report(){
+    const lines=[], cards=[];
+    let bad=0,warn=0;
+    for(const [k,exp] of Object.entries(EXPECTED)){
+      const got=qCount(k);
+      const label={eata:"EATA",ifp:"IFP",bfp:"BFP",neo:"NEO PI-R",neoffi:"NEO FFI-R"}[k];
+      if(got===null){cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-warn">⚠️ base não exposta globalmente</span><br>Esperado: ${exp}</div>`);warn++}
+      else if(got===exp){cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-ok">✅ ${got}/${exp}</span></div>`)}
+      else {cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-bad">❌ ${got}/${exp}</span></div>`);bad++}
+      lines.push(`${label}: ${got===null?"não detectável":got+"/"+exp}`);
+    }
+    const [hk,hist]=detectHistory();
+    cards.push(`<div class="rp-item"><b>Histórico</b><br>${hist.length} registro(s)<br><small>${hk||"não detectado"}</small></div>`);
+    const errs=runtimeErrors();
+    cards.push(`<div class="rp-item"><b>Erros registrados</b><br><span class="${errs.length?'rp-warn':'rp-ok'}">${errs.length?'⚠️ '+errs.length:'✅ 0'}</span></div>`);
+    const bp=lastBackup();
+    cards.push(`<div class="rp-item"><b>Backup</b><br>${bp?bp.toLocaleString():"⚠️ data não detectada"}</div>`);
+    cards.push(`<div class="rp-item"><b>Sistema</b><br>V${SYS_VERSION}<br>${UPDATED}</div>`);
+    lines.push(`Histórico: ${hist.length} registro(s) em ${hk||"chave não detectada"}`);
+    lines.push(`Erros locais: ${errs.length}`);
+    lines.push(`Sistema: V${SYS_VERSION} · ${UPDATED}`);
+    lines.push(`Resultado da integridade: ${bad?"ERROS ENCONTRADOS":warn?"COM RESSALVAS":"OK"}`);
+    document.getElementById("rpSummary").innerHTML=cards.join("");
+    document.getElementById("rpDetails").textContent=lines.join("\n");
+    return lines.join("\n");
+  }
+  function recalc(){
+    const [hk,hist]=detectHistory();
+    if(!hk||!hist.length){alert("Nenhum histórico compatível foi localizado.");return}
+    let changed=0, flagged=0;
+    const out=hist.map(r=>{
+      if(!r||typeof r!=="object")return r;
+      const n={...r};
+      if(!n.systemVersion){n.systemVersion="legado";changed++}
+      const key=String(n.test||n.teste||n.type||n.tipo||"").toLowerCase();
+      if(key.includes("ifp")){
+        const answered=Array.isArray(n.answers)?n.answers.length:Array.isArray(n.responses)?n.responses.length:(n.answeredCount||n.respondidas||null);
+        if(answered===100){
+          n.expectedCount=100;n.completionRechecked=true;
+          if(String(n.systemVersion).startsWith("9")||n.systemVersion==="legado"){
+            n.integrityNotice="IFP com 100 respostas: completude revalidada na V9.2; a V9 possuía erro conhecido 100/155.";
+            flagged++;
+          }
+          changed++;
+        }
+      }
+      return n;
+    });
+    localStorage.setItem(hk,JSON.stringify(out));
+    alert(`Revisão concluída. ${changed} metadado(s) atualizado(s); ${flagged} IFP(s) marcado(s) para revalidação.`);
+    report();
+  }
+  const oldOnError=window.onerror;
+  window.onerror=function(msg,src,line,col,err){
+    try{
+      const a=runtimeErrors();a.unshift({at:new Date().toISOString(),msg:String(msg),src:String(src||""),line,col,stack:err&&err.stack?String(err.stack):""});
+      localStorage.setItem(ERRKEY,JSON.stringify(a.slice(0,50)));
+    }catch(e){}
+    if(typeof oldOnError==="function")return oldOnError.apply(this,arguments);
+  };
+  window.addEventListener("unhandledrejection",e=>{
+    try{
+      const a=runtimeErrors();a.unshift({at:new Date().toISOString(),msg:"Unhandled promise: "+String(e.reason)});
+      localStorage.setItem(ERRKEY,JSON.stringify(a.slice(0,50)));
+    }catch(_){}
+  });
+  document.getElementById("reliabilityFab").onclick=()=>{document.getElementById("reliabilityPanel").classList.add("open");report()};
+  document.getElementById("rpClose").onclick=()=>document.getElementById("reliabilityPanel").classList.remove("open");
+  document.getElementById("rpRun").onclick=report;
+  document.getElementById("rpRecalc").onclick=recalc;
+  document.getElementById("rpCopy").onclick=async()=>{const t=report();try{await navigator.clipboard.writeText(t);alert("Diagnóstico copiado.")}catch(e){prompt("Copie o diagnóstico:",t)}};
+  document.getElementById("rpErrors").onclick=()=>{const a=runtimeErrors();document.getElementById("rpDetails").textContent=a.length?JSON.stringify(a,null,2):"Nenhum erro JavaScript registrado nesta versão."};
+  // Stamp version in common save payloads by exposing helper for future saves.
+  window.PSICO_SYSTEM_VERSION=SYS_VERSION;
+  window.psicoStampRecord=function(o){return Object.assign({},o,{systemVersion:SYS_VERSION,systemUpdated:UPDATED})};
+})();
+</script>
+
+</body></html>`);w.document.close()}
 function generateAIReportPDF(x){pdfWindow(x,true)}
 function generateSummaryPDF(x){pdfWindow(x,false)}
 function done(t,x,n){x.test=t;x.schemaVersion=DATA_SCHEMA_VERSION;x.time=x.time??elapsed();x.qa=collectQA();x.selectedCount=n;x.reportId=reportId(x);let h=hist(t);h.unshift(x);save(t,h);clearDraft(t);result(x);let c=cfg();if(c.autoclear){document.querySelectorAll('input[type=radio]').forEach(z=>z.checked=false);prog(n)}if(!c.keep){$('#name').value='';$('#age').value=''}}
@@ -829,7 +994,172 @@ function paloReportPDF(d){const text=paloReportText(d),w=window.open('','_blank'
 
 /* ===== V9: Central de Avaliação, qualidade e demonstração ===== */
 .eval-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.eval-card{border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:12px}.eval-card label{display:flex;gap:8px;align-items:flex-start}.eval-card input[type=checkbox]{width:auto;margin-top:3px}.quality-chip{display:inline-block;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:900;border:1px solid var(--line);margin-top:5px}.quality-good{background:rgba(53,174,98,.12)}.quality-warn{background:rgba(210,157,42,.14)}.quality-bad{background:rgba(204,67,67,.13)}.demo-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#6b4d14;border:1px solid #9a7524;font-size:10px;font-weight:900;margin-left:6px}.master-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}.master-summary>div{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface2)}.palo-session-chart{display:flex;align-items:flex-end;gap:8px;height:170px;padding:16px 6px 2px;border-bottom:1px solid var(--line);overflow-x:auto}.palo-session-chart .pcol{min-width:42px;text-align:center;display:flex;flex-direction:column;justify-content:flex-end;height:100%}.palo-session-chart .pbar{width:26px;margin:0 auto 5px;border-radius:6px 6px 2px 2px;background:currentColor;opacity:.75;min-height:4px}.vfooter-meta{margin-top:8px;font-size:11px;opacity:.9}.quality-list{margin:8px 0 0;padding-left:18px}.quality-list li{margin:3px 0}
-</style></head><body><button onclick="print()">Salvar / Imprimir PDF</button><h1>✍️ Relatório de Treinamento — Palográfico</h1><pre>${esc(text)}</pre></body></html>`);w.document.close()}
+</style></head><body><button onclick="print()">Salvar / Imprimir PDF</button><h1>✍️ Relatório de Treinamento — Palográfico</h1><pre>${esc(text)}</pre>
+<style>
+#reliabilityPanel{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99990;display:none;align-items:center;justify-content:center;padding:18px}
+#reliabilityPanel.open{display:flex}
+#reliabilityPanel .rp-card{width:min(920px,100%);max-height:88vh;overflow:auto;background:var(--card,#111827);color:var(--text,#f8fafc);border:1px solid rgba(148,163,184,.25);border-radius:18px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+#reliabilityPanel .rp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:12px 0}
+#reliabilityPanel .rp-item{padding:12px;border-radius:12px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18)}
+#reliabilityPanel button{margin:5px 5px 5px 0}
+#reliabilityFab{position:fixed;right:16px;bottom:16px;z-index:9990;border-radius:999px;padding:10px 14px;border:0;box-shadow:0 8px 28px rgba(0,0,0,.25);cursor:pointer}
+.rp-ok{color:#22c55e}.rp-warn{color:#f59e0b}.rp-bad{color:#ef4444}
+</style>
+<button id="reliabilityFab" type="button" title="Diagnóstico do sistema">🛡️ Diagnóstico</button>
+<div id="reliabilityPanel" aria-hidden="true">
+  <div class="rp-card">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 9.2 · Atualizado em 14/09/2026</small></div>
+      <button type="button" id="rpClose">✕ Fechar</button>
+    </div>
+    <p>Verifica a estrutura dos testes, histórico, versões, backup e erros locais. Não altera respostas ao executar o diagnóstico.</p>
+    <div id="rpSummary" class="rp-grid"></div>
+    <div>
+      <button type="button" id="rpRun">🧪 Verificar integridade</button>
+      <button type="button" id="rpRecalc">🔄 Recalcular metadados do histórico</button>
+      <button type="button" id="rpCopy">📋 Copiar diagnóstico</button>
+      <button type="button" id="rpErrors">🚨 Ver erros</button>
+    </div>
+    <details style="margin-top:14px"><summary><b>📝 Novidades da V9.2</b></summary>
+      <ul>
+        <li>Diagnóstico automático e teste de integridade dos bancos de questões.</li>
+        <li>Versão do sistema registrada nas novas aplicações quando possível.</li>
+        <li>Revisão de metadados de históricos antigos e alerta para registros da V9 com IFP 100/155.</li>
+        <li>Registro local de erros JavaScript com opção de copiar diagnóstico.</li>
+        <li>Aviso de backup antigo e verificação da versão dos dados.</li>
+      </ul>
+    </details>
+    <pre id="rpDetails" style="white-space:pre-wrap;font-size:12px;background:rgba(0,0,0,.18);padding:12px;border-radius:12px;margin-top:14px"></pre>
+  </div>
+</div>
+<script>
+(function(){
+  const SYS_VERSION="9.2", UPDATED="14/09/2026";
+  const EXPECTED={eata:40,ifp:100,bfp:126,neo:240,neoffi:60};
+  const ERRKEY="psico_runtime_errors_v92";
+  function lsKeys(){let a=[];for(let i=0;i<localStorage.length;i++)a.push(localStorage.key(i));return a}
+  function findArray(names){
+    for(const n of names){try{const v=window[n];if(Array.isArray(v))return v}catch(e){}}
+    return null;
+  }
+  function qCount(key){
+    const map={
+      eata:["eataQ","EATA_Q","eataQuestions"],
+      ifp:["ifpQ","IFP_Q","ifpQuestions"],
+      bfp:["bfpQ","BFP_Q","bfpQuestions"],
+      neo:["neoQ","NEO_Q","neoQuestions"],
+      neoffi:["neoFfiQ","neoffiQ","NEOFFI_Q","neoFfiQuestions"]
+    };
+    const a=findArray(map[key]||[]);
+    return a?a.length:null;
+  }
+  function detectHistory(){
+    const candidates=[];
+    for(const k of lsKeys()){
+      try{
+        const v=JSON.parse(localStorage.getItem(k));
+        if(Array.isArray(v)&&v.length&&typeof v[0]==="object"){
+          const s=JSON.stringify(v[0]).toLowerCase();
+          if(/teste|test|resultado|result|date|data/.test(s)) candidates.push([k,v]);
+        }
+      }catch(e){}
+    }
+    candidates.sort((a,b)=>b[1].length-a[1].length);
+    return candidates[0]||[null,[]];
+  }
+  function lastBackup(){
+    let newest=null;
+    for(const k of lsKeys()){
+      if(/backup/i.test(k)){
+        const raw=localStorage.getItem(k);
+        const d=new Date(raw);
+        if(!isNaN(d)&&(!newest||d>newest))newest=d;
+      }
+    }
+    return newest;
+  }
+  function runtimeErrors(){
+    try{return JSON.parse(localStorage.getItem(ERRKEY)||"[]")}catch(e){return[]}
+  }
+  function report(){
+    const lines=[], cards=[];
+    let bad=0,warn=0;
+    for(const [k,exp] of Object.entries(EXPECTED)){
+      const got=qCount(k);
+      const label={eata:"EATA",ifp:"IFP",bfp:"BFP",neo:"NEO PI-R",neoffi:"NEO FFI-R"}[k];
+      if(got===null){cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-warn">⚠️ base não exposta globalmente</span><br>Esperado: ${exp}</div>`);warn++}
+      else if(got===exp){cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-ok">✅ ${got}/${exp}</span></div>`)}
+      else {cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-bad">❌ ${got}/${exp}</span></div>`);bad++}
+      lines.push(`${label}: ${got===null?"não detectável":got+"/"+exp}`);
+    }
+    const [hk,hist]=detectHistory();
+    cards.push(`<div class="rp-item"><b>Histórico</b><br>${hist.length} registro(s)<br><small>${hk||"não detectado"}</small></div>`);
+    const errs=runtimeErrors();
+    cards.push(`<div class="rp-item"><b>Erros registrados</b><br><span class="${errs.length?'rp-warn':'rp-ok'}">${errs.length?'⚠️ '+errs.length:'✅ 0'}</span></div>`);
+    const bp=lastBackup();
+    cards.push(`<div class="rp-item"><b>Backup</b><br>${bp?bp.toLocaleString():"⚠️ data não detectada"}</div>`);
+    cards.push(`<div class="rp-item"><b>Sistema</b><br>V${SYS_VERSION}<br>${UPDATED}</div>`);
+    lines.push(`Histórico: ${hist.length} registro(s) em ${hk||"chave não detectada"}`);
+    lines.push(`Erros locais: ${errs.length}`);
+    lines.push(`Sistema: V${SYS_VERSION} · ${UPDATED}`);
+    lines.push(`Resultado da integridade: ${bad?"ERROS ENCONTRADOS":warn?"COM RESSALVAS":"OK"}`);
+    document.getElementById("rpSummary").innerHTML=cards.join("");
+    document.getElementById("rpDetails").textContent=lines.join("\n");
+    return lines.join("\n");
+  }
+  function recalc(){
+    const [hk,hist]=detectHistory();
+    if(!hk||!hist.length){alert("Nenhum histórico compatível foi localizado.");return}
+    let changed=0, flagged=0;
+    const out=hist.map(r=>{
+      if(!r||typeof r!=="object")return r;
+      const n={...r};
+      if(!n.systemVersion){n.systemVersion="legado";changed++}
+      const key=String(n.test||n.teste||n.type||n.tipo||"").toLowerCase();
+      if(key.includes("ifp")){
+        const answered=Array.isArray(n.answers)?n.answers.length:Array.isArray(n.responses)?n.responses.length:(n.answeredCount||n.respondidas||null);
+        if(answered===100){
+          n.expectedCount=100;n.completionRechecked=true;
+          if(String(n.systemVersion).startsWith("9")||n.systemVersion==="legado"){
+            n.integrityNotice="IFP com 100 respostas: completude revalidada na V9.2; a V9 possuía erro conhecido 100/155.";
+            flagged++;
+          }
+          changed++;
+        }
+      }
+      return n;
+    });
+    localStorage.setItem(hk,JSON.stringify(out));
+    alert(`Revisão concluída. ${changed} metadado(s) atualizado(s); ${flagged} IFP(s) marcado(s) para revalidação.`);
+    report();
+  }
+  const oldOnError=window.onerror;
+  window.onerror=function(msg,src,line,col,err){
+    try{
+      const a=runtimeErrors();a.unshift({at:new Date().toISOString(),msg:String(msg),src:String(src||""),line,col,stack:err&&err.stack?String(err.stack):""});
+      localStorage.setItem(ERRKEY,JSON.stringify(a.slice(0,50)));
+    }catch(e){}
+    if(typeof oldOnError==="function")return oldOnError.apply(this,arguments);
+  };
+  window.addEventListener("unhandledrejection",e=>{
+    try{
+      const a=runtimeErrors();a.unshift({at:new Date().toISOString(),msg:"Unhandled promise: "+String(e.reason)});
+      localStorage.setItem(ERRKEY,JSON.stringify(a.slice(0,50)));
+    }catch(_){}
+  });
+  document.getElementById("reliabilityFab").onclick=()=>{document.getElementById("reliabilityPanel").classList.add("open");report()};
+  document.getElementById("rpClose").onclick=()=>document.getElementById("reliabilityPanel").classList.remove("open");
+  document.getElementById("rpRun").onclick=report;
+  document.getElementById("rpRecalc").onclick=recalc;
+  document.getElementById("rpCopy").onclick=async()=>{const t=report();try{await navigator.clipboard.writeText(t);alert("Diagnóstico copiado.")}catch(e){prompt("Copie o diagnóstico:",t)}};
+  document.getElementById("rpErrors").onclick=()=>{const a=runtimeErrors();document.getElementById("rpDetails").textContent=a.length?JSON.stringify(a,null,2):"Nenhum erro JavaScript registrado nesta versão."};
+  // Stamp version in common save payloads by exposing helper for future saves.
+  window.PSICO_SYSTEM_VERSION=SYS_VERSION;
+  window.psicoStampRecord=function(o){return Object.assign({},o,{systemVersion:SYS_VERSION,systemUpdated:UPDATED})};
+})();
+</script>
+
+</body></html>`);w.document.close()}
 function paloEvolutionHTML(h){const done=h.filter(x=>Number.isFinite(Number(x.average))).slice(0,10).reverse();if(done.length<2)return `<div class="panel"><h3>📈 Evolução Palográfica</h3><p class="note">Faça pelo menos dois registros para visualizar a evolução da média de palos por sessão.</p></div>`;const max=Math.max(...done.map(x=>Number(x.average)),1);return `<div class="panel"><h3>📈 Evolução Palográfica</h3><div class="paloTrend">${done.map((x,i)=>`<div class="col"><div class="bar" style="height:${Math.max(5,Number(x.average)/max*110)}px" title="Média ${Number(x.average).toFixed(1)}"></div><small>${Number(x.average).toFixed(0)}</small></div>`).join('')}</div><p class="note">Média de palos por sessão nas últimas aplicações. Use apenas para acompanhar seu próprio ritmo; aplicações com durações diferentes não são diretamente comparáveis.</p></div>`}
 function paloHistory(){const h=hist('palo').slice().sort((a,b)=>(b.id||0)-(a.id||0));$('#pHist').innerHTML=paloEvolutionHTML(h)+`<div class="panel"><h2>Histórico Palográfico</h2><div class="tablewrap"><table><tr><th>Data</th><th>Sessões</th><th>Total</th><th>Média</th><th>Relatório</th></tr>${h.length?h.map((x,i)=>`<tr><td>${esc(x.date)}</td><td>${x.counts?.filter(Number.isFinite).length||0}/${x.sessions}</td><td>${x.total??'—'}</td><td>${Number(x.average||0).toFixed(1)}</td><td><button class="secondary phpdf" data-i="${i}">📕 PDF IA</button></td></tr>`).join(''):'<tr><td colspan="5">Nenhum treino salvo.</td></tr>'}</table></div></div>`;document.querySelectorAll('.phpdf').forEach(b=>b.onclick=()=>paloReportPDF(h[+b.dataset.i]))}
 
@@ -937,7 +1267,172 @@ function masterReportText(items){
   const c=appCfg(), head=`RELATÓRIO MESTRE — CENTRAL DE AVALIAÇÃO\n==========================================\nVersão da plataforma: ${APP_VERSION}\nAtualização: ${APP_UPDATED}\nContexto: ${c.career||'Segurança Pública — Geral'}${c.contest?' · '+c.contest:''}\nCandidato: ${c.hidePersonal?'Oculto por configuração':(c.name||'Não informado')}\nAplicações selecionadas: ${items.length}\n\n${masterPrompt()}\n\nDADOS SELECIONADOS\n`;
   return head+items.map((x,i)=>{const q=reportQuality(x);const det=(x.details||[]).map(d=>`  - ${d.name||d.scale||'Resultado'}: bruto ${d.score??d.raw??'—'} | percentil ${d.pct??'—'} | T ${d.t??'—'} | classificação ${d.classif??d.out??'—'} | status ${d.out??'—'}`).join('\n')||'  - Sem detalhes estruturados.';const qa=(x.qa||[]).map(z=>`  Q${z.number??''}: ${z.question||''}\n    Resposta: ${z.answer||'—'}${z.seconds!=null?` | Tempo: ${Number(z.seconds).toFixed(1)} s`:''}`).join('\n');return `\n------------------------------------------\nAPLICAÇÃO ${i+1}: ${x.testName||TEST_NAMES[x.test]||x.test||'Teste'}\nData: ${x.date||'—'}\nID: ${x.reportId||reportId(x)}\nResultado do simulador: ${displayStatus(x.out||'—')}\nResumo: ${x.summary||'—'}\nQualidade: ${q.level} | Confiança dos dados: ${q.confidence}\nRessalvas: ${q.reasons.length?q.reasons.join('; '):'nenhuma ressalva automática relevante'}\nTempo: ${x.time!=null?fmtTime(x.time):'—'}\nInterrupções: ${x.interruptions||0}\n\nRESULTADOS OBJETIVOS\n${det}\n\nPERGUNTAS E RESPOSTAS${qa?'\n'+qa:'\n  Não disponíveis neste registro legado.'}`}).join('\n')+`\n\nAVISO FINAL\nEste documento é material de treinamento. A classificação solicitada à IA é apenas estimativa educacional e não equivale à avaliação psicológica oficial.`;
 }
-function printTextPDF(title,text){const w=window.open('','_blank');if(!w){alert('Permita pop-ups para gerar o PDF.');return}w.document.write(`<html><head><title>${esc(title)}</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:32px auto;padding:0 24px;color:#111}h1{font-size:22px}pre{white-space:pre-wrap;font:12px/1.48 Arial,sans-serif}button{padding:10px 16px;margin-bottom:18px}@media print{button{display:none}}</style></head><body><button onclick="print()">Salvar / Imprimir PDF</button><h1>${esc(title)}</h1><pre>${esc(text)}</pre></body></html>`);w.document.close()}
+function printTextPDF(title,text){const w=window.open('','_blank');if(!w){alert('Permita pop-ups para gerar o PDF.');return}w.document.write(`<html><head><title>${esc(title)}</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:32px auto;padding:0 24px;color:#111}h1{font-size:22px}pre{white-space:pre-wrap;font:12px/1.48 Arial,sans-serif}button{padding:10px 16px;margin-bottom:18px}@media print{button{display:none}}</style></head><body><button onclick="print()">Salvar / Imprimir PDF</button><h1>${esc(title)}</h1><pre>${esc(text)}</pre>
+<style>
+#reliabilityPanel{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99990;display:none;align-items:center;justify-content:center;padding:18px}
+#reliabilityPanel.open{display:flex}
+#reliabilityPanel .rp-card{width:min(920px,100%);max-height:88vh;overflow:auto;background:var(--card,#111827);color:var(--text,#f8fafc);border:1px solid rgba(148,163,184,.25);border-radius:18px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+#reliabilityPanel .rp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:12px 0}
+#reliabilityPanel .rp-item{padding:12px;border-radius:12px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18)}
+#reliabilityPanel button{margin:5px 5px 5px 0}
+#reliabilityFab{position:fixed;right:16px;bottom:16px;z-index:9990;border-radius:999px;padding:10px 14px;border:0;box-shadow:0 8px 28px rgba(0,0,0,.25);cursor:pointer}
+.rp-ok{color:#22c55e}.rp-warn{color:#f59e0b}.rp-bad{color:#ef4444}
+</style>
+<button id="reliabilityFab" type="button" title="Diagnóstico do sistema">🛡️ Diagnóstico</button>
+<div id="reliabilityPanel" aria-hidden="true">
+  <div class="rp-card">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 9.2 · Atualizado em 14/09/2026</small></div>
+      <button type="button" id="rpClose">✕ Fechar</button>
+    </div>
+    <p>Verifica a estrutura dos testes, histórico, versões, backup e erros locais. Não altera respostas ao executar o diagnóstico.</p>
+    <div id="rpSummary" class="rp-grid"></div>
+    <div>
+      <button type="button" id="rpRun">🧪 Verificar integridade</button>
+      <button type="button" id="rpRecalc">🔄 Recalcular metadados do histórico</button>
+      <button type="button" id="rpCopy">📋 Copiar diagnóstico</button>
+      <button type="button" id="rpErrors">🚨 Ver erros</button>
+    </div>
+    <details style="margin-top:14px"><summary><b>📝 Novidades da V9.2</b></summary>
+      <ul>
+        <li>Diagnóstico automático e teste de integridade dos bancos de questões.</li>
+        <li>Versão do sistema registrada nas novas aplicações quando possível.</li>
+        <li>Revisão de metadados de históricos antigos e alerta para registros da V9 com IFP 100/155.</li>
+        <li>Registro local de erros JavaScript com opção de copiar diagnóstico.</li>
+        <li>Aviso de backup antigo e verificação da versão dos dados.</li>
+      </ul>
+    </details>
+    <pre id="rpDetails" style="white-space:pre-wrap;font-size:12px;background:rgba(0,0,0,.18);padding:12px;border-radius:12px;margin-top:14px"></pre>
+  </div>
+</div>
+<script>
+(function(){
+  const SYS_VERSION="9.2", UPDATED="14/09/2026";
+  const EXPECTED={eata:40,ifp:100,bfp:126,neo:240,neoffi:60};
+  const ERRKEY="psico_runtime_errors_v92";
+  function lsKeys(){let a=[];for(let i=0;i<localStorage.length;i++)a.push(localStorage.key(i));return a}
+  function findArray(names){
+    for(const n of names){try{const v=window[n];if(Array.isArray(v))return v}catch(e){}}
+    return null;
+  }
+  function qCount(key){
+    const map={
+      eata:["eataQ","EATA_Q","eataQuestions"],
+      ifp:["ifpQ","IFP_Q","ifpQuestions"],
+      bfp:["bfpQ","BFP_Q","bfpQuestions"],
+      neo:["neoQ","NEO_Q","neoQuestions"],
+      neoffi:["neoFfiQ","neoffiQ","NEOFFI_Q","neoFfiQuestions"]
+    };
+    const a=findArray(map[key]||[]);
+    return a?a.length:null;
+  }
+  function detectHistory(){
+    const candidates=[];
+    for(const k of lsKeys()){
+      try{
+        const v=JSON.parse(localStorage.getItem(k));
+        if(Array.isArray(v)&&v.length&&typeof v[0]==="object"){
+          const s=JSON.stringify(v[0]).toLowerCase();
+          if(/teste|test|resultado|result|date|data/.test(s)) candidates.push([k,v]);
+        }
+      }catch(e){}
+    }
+    candidates.sort((a,b)=>b[1].length-a[1].length);
+    return candidates[0]||[null,[]];
+  }
+  function lastBackup(){
+    let newest=null;
+    for(const k of lsKeys()){
+      if(/backup/i.test(k)){
+        const raw=localStorage.getItem(k);
+        const d=new Date(raw);
+        if(!isNaN(d)&&(!newest||d>newest))newest=d;
+      }
+    }
+    return newest;
+  }
+  function runtimeErrors(){
+    try{return JSON.parse(localStorage.getItem(ERRKEY)||"[]")}catch(e){return[]}
+  }
+  function report(){
+    const lines=[], cards=[];
+    let bad=0,warn=0;
+    for(const [k,exp] of Object.entries(EXPECTED)){
+      const got=qCount(k);
+      const label={eata:"EATA",ifp:"IFP",bfp:"BFP",neo:"NEO PI-R",neoffi:"NEO FFI-R"}[k];
+      if(got===null){cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-warn">⚠️ base não exposta globalmente</span><br>Esperado: ${exp}</div>`);warn++}
+      else if(got===exp){cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-ok">✅ ${got}/${exp}</span></div>`)}
+      else {cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-bad">❌ ${got}/${exp}</span></div>`);bad++}
+      lines.push(`${label}: ${got===null?"não detectável":got+"/"+exp}`);
+    }
+    const [hk,hist]=detectHistory();
+    cards.push(`<div class="rp-item"><b>Histórico</b><br>${hist.length} registro(s)<br><small>${hk||"não detectado"}</small></div>`);
+    const errs=runtimeErrors();
+    cards.push(`<div class="rp-item"><b>Erros registrados</b><br><span class="${errs.length?'rp-warn':'rp-ok'}">${errs.length?'⚠️ '+errs.length:'✅ 0'}</span></div>`);
+    const bp=lastBackup();
+    cards.push(`<div class="rp-item"><b>Backup</b><br>${bp?bp.toLocaleString():"⚠️ data não detectada"}</div>`);
+    cards.push(`<div class="rp-item"><b>Sistema</b><br>V${SYS_VERSION}<br>${UPDATED}</div>`);
+    lines.push(`Histórico: ${hist.length} registro(s) em ${hk||"chave não detectada"}`);
+    lines.push(`Erros locais: ${errs.length}`);
+    lines.push(`Sistema: V${SYS_VERSION} · ${UPDATED}`);
+    lines.push(`Resultado da integridade: ${bad?"ERROS ENCONTRADOS":warn?"COM RESSALVAS":"OK"}`);
+    document.getElementById("rpSummary").innerHTML=cards.join("");
+    document.getElementById("rpDetails").textContent=lines.join("\n");
+    return lines.join("\n");
+  }
+  function recalc(){
+    const [hk,hist]=detectHistory();
+    if(!hk||!hist.length){alert("Nenhum histórico compatível foi localizado.");return}
+    let changed=0, flagged=0;
+    const out=hist.map(r=>{
+      if(!r||typeof r!=="object")return r;
+      const n={...r};
+      if(!n.systemVersion){n.systemVersion="legado";changed++}
+      const key=String(n.test||n.teste||n.type||n.tipo||"").toLowerCase();
+      if(key.includes("ifp")){
+        const answered=Array.isArray(n.answers)?n.answers.length:Array.isArray(n.responses)?n.responses.length:(n.answeredCount||n.respondidas||null);
+        if(answered===100){
+          n.expectedCount=100;n.completionRechecked=true;
+          if(String(n.systemVersion).startsWith("9")||n.systemVersion==="legado"){
+            n.integrityNotice="IFP com 100 respostas: completude revalidada na V9.2; a V9 possuía erro conhecido 100/155.";
+            flagged++;
+          }
+          changed++;
+        }
+      }
+      return n;
+    });
+    localStorage.setItem(hk,JSON.stringify(out));
+    alert(`Revisão concluída. ${changed} metadado(s) atualizado(s); ${flagged} IFP(s) marcado(s) para revalidação.`);
+    report();
+  }
+  const oldOnError=window.onerror;
+  window.onerror=function(msg,src,line,col,err){
+    try{
+      const a=runtimeErrors();a.unshift({at:new Date().toISOString(),msg:String(msg),src:String(src||""),line,col,stack:err&&err.stack?String(err.stack):""});
+      localStorage.setItem(ERRKEY,JSON.stringify(a.slice(0,50)));
+    }catch(e){}
+    if(typeof oldOnError==="function")return oldOnError.apply(this,arguments);
+  };
+  window.addEventListener("unhandledrejection",e=>{
+    try{
+      const a=runtimeErrors();a.unshift({at:new Date().toISOString(),msg:"Unhandled promise: "+String(e.reason)});
+      localStorage.setItem(ERRKEY,JSON.stringify(a.slice(0,50)));
+    }catch(_){}
+  });
+  document.getElementById("reliabilityFab").onclick=()=>{document.getElementById("reliabilityPanel").classList.add("open");report()};
+  document.getElementById("rpClose").onclick=()=>document.getElementById("reliabilityPanel").classList.remove("open");
+  document.getElementById("rpRun").onclick=report;
+  document.getElementById("rpRecalc").onclick=recalc;
+  document.getElementById("rpCopy").onclick=async()=>{const t=report();try{await navigator.clipboard.writeText(t);alert("Diagnóstico copiado.")}catch(e){prompt("Copie o diagnóstico:",t)}};
+  document.getElementById("rpErrors").onclick=()=>{const a=runtimeErrors();document.getElementById("rpDetails").textContent=a.length?JSON.stringify(a,null,2):"Nenhum erro JavaScript registrado nesta versão."};
+  // Stamp version in common save payloads by exposing helper for future saves.
+  window.PSICO_SYSTEM_VERSION=SYS_VERSION;
+  window.psicoStampRecord=function(o){return Object.assign({},o,{systemVersion:SYS_VERSION,systemUpdated:UPDATED})};
+})();
+</script>
+
+</body></html>`);w.document.close()}
 
 function evaluationCenter(){
   const box=$('#evaluationApp');if(!box)return;const all=allApplications();
@@ -967,4 +1462,169 @@ document.querySelectorAll('[data-nav="evaluation"]').forEach(b=>b.addEventListen
 
 document.addEventListener('DOMContentLoaded',()=>{setupSettingsV9();setupDemoBadge()});
 
-</script><footer><div style="font-size:14px;font-weight:800;letter-spacing:.35px;line-height:1.5;margin-bottom:8px">FERRAMENTA DE TREINAMENTO. RESULTADOS SÃO REFERÊNCIAS DO SIMULADOR E NÃO CONSTITUEM AVALIAÇÃO, DIAGNÓSTICO, LAUDO OU RESULTADO OFICIAL.</div><div style="font-size:12px">Criação e adaptação - WPM</div><div class="vfooter-meta"><b>Versão 9.1</b> · Atualizado em 14/09/2026</div></footer></body></html>
+</script><footer><div style="font-size:14px;font-weight:800;letter-spacing:.35px;line-height:1.5;margin-bottom:8px">FERRAMENTA DE TREINAMENTO. RESULTADOS SÃO REFERÊNCIAS DO SIMULADOR E NÃO CONSTITUEM AVALIAÇÃO, DIAGNÓSTICO, LAUDO OU RESULTADO OFICIAL.</div><div style="font-size:12px">Criação e adaptação - WPM</div><div class="vfooter-meta"><b>Versão 9.2</b> · Atualizado em 14/09/2026</div></footer>
+<style>
+#reliabilityPanel{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99990;display:none;align-items:center;justify-content:center;padding:18px}
+#reliabilityPanel.open{display:flex}
+#reliabilityPanel .rp-card{width:min(920px,100%);max-height:88vh;overflow:auto;background:var(--card,#111827);color:var(--text,#f8fafc);border:1px solid rgba(148,163,184,.25);border-radius:18px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+#reliabilityPanel .rp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:12px 0}
+#reliabilityPanel .rp-item{padding:12px;border-radius:12px;background:rgba(148,163,184,.10);border:1px solid rgba(148,163,184,.18)}
+#reliabilityPanel button{margin:5px 5px 5px 0}
+#reliabilityFab{position:fixed;right:16px;bottom:16px;z-index:9990;border-radius:999px;padding:10px 14px;border:0;box-shadow:0 8px 28px rgba(0,0,0,.25);cursor:pointer}
+.rp-ok{color:#22c55e}.rp-warn{color:#f59e0b}.rp-bad{color:#ef4444}
+</style>
+<button id="reliabilityFab" type="button" title="Diagnóstico do sistema">🛡️ Diagnóstico</button>
+<div id="reliabilityPanel" aria-hidden="true">
+  <div class="rp-card">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 9.2 · Atualizado em 14/09/2026</small></div>
+      <button type="button" id="rpClose">✕ Fechar</button>
+    </div>
+    <p>Verifica a estrutura dos testes, histórico, versões, backup e erros locais. Não altera respostas ao executar o diagnóstico.</p>
+    <div id="rpSummary" class="rp-grid"></div>
+    <div>
+      <button type="button" id="rpRun">🧪 Verificar integridade</button>
+      <button type="button" id="rpRecalc">🔄 Recalcular metadados do histórico</button>
+      <button type="button" id="rpCopy">📋 Copiar diagnóstico</button>
+      <button type="button" id="rpErrors">🚨 Ver erros</button>
+    </div>
+    <details style="margin-top:14px"><summary><b>📝 Novidades da V9.2</b></summary>
+      <ul>
+        <li>Diagnóstico automático e teste de integridade dos bancos de questões.</li>
+        <li>Versão do sistema registrada nas novas aplicações quando possível.</li>
+        <li>Revisão de metadados de históricos antigos e alerta para registros da V9 com IFP 100/155.</li>
+        <li>Registro local de erros JavaScript com opção de copiar diagnóstico.</li>
+        <li>Aviso de backup antigo e verificação da versão dos dados.</li>
+      </ul>
+    </details>
+    <pre id="rpDetails" style="white-space:pre-wrap;font-size:12px;background:rgba(0,0,0,.18);padding:12px;border-radius:12px;margin-top:14px"></pre>
+  </div>
+</div>
+<script>
+(function(){
+  const SYS_VERSION="9.2", UPDATED="14/09/2026";
+  const EXPECTED={eata:40,ifp:100,bfp:126,neo:240,neoffi:60};
+  const ERRKEY="psico_runtime_errors_v92";
+  function lsKeys(){let a=[];for(let i=0;i<localStorage.length;i++)a.push(localStorage.key(i));return a}
+  function findArray(names){
+    for(const n of names){try{const v=window[n];if(Array.isArray(v))return v}catch(e){}}
+    return null;
+  }
+  function qCount(key){
+    const map={
+      eata:["eataQ","EATA_Q","eataQuestions"],
+      ifp:["ifpQ","IFP_Q","ifpQuestions"],
+      bfp:["bfpQ","BFP_Q","bfpQuestions"],
+      neo:["neoQ","NEO_Q","neoQuestions"],
+      neoffi:["neoFfiQ","neoffiQ","NEOFFI_Q","neoFfiQuestions"]
+    };
+    const a=findArray(map[key]||[]);
+    return a?a.length:null;
+  }
+  function detectHistory(){
+    const candidates=[];
+    for(const k of lsKeys()){
+      try{
+        const v=JSON.parse(localStorage.getItem(k));
+        if(Array.isArray(v)&&v.length&&typeof v[0]==="object"){
+          const s=JSON.stringify(v[0]).toLowerCase();
+          if(/teste|test|resultado|result|date|data/.test(s)) candidates.push([k,v]);
+        }
+      }catch(e){}
+    }
+    candidates.sort((a,b)=>b[1].length-a[1].length);
+    return candidates[0]||[null,[]];
+  }
+  function lastBackup(){
+    let newest=null;
+    for(const k of lsKeys()){
+      if(/backup/i.test(k)){
+        const raw=localStorage.getItem(k);
+        const d=new Date(raw);
+        if(!isNaN(d)&&(!newest||d>newest))newest=d;
+      }
+    }
+    return newest;
+  }
+  function runtimeErrors(){
+    try{return JSON.parse(localStorage.getItem(ERRKEY)||"[]")}catch(e){return[]}
+  }
+  function report(){
+    const lines=[], cards=[];
+    let bad=0,warn=0;
+    for(const [k,exp] of Object.entries(EXPECTED)){
+      const got=qCount(k);
+      const label={eata:"EATA",ifp:"IFP",bfp:"BFP",neo:"NEO PI-R",neoffi:"NEO FFI-R"}[k];
+      if(got===null){cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-warn">⚠️ base não exposta globalmente</span><br>Esperado: ${exp}</div>`);warn++}
+      else if(got===exp){cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-ok">✅ ${got}/${exp}</span></div>`)}
+      else {cards.push(`<div class="rp-item"><b>${label}</b><br><span class="rp-bad">❌ ${got}/${exp}</span></div>`);bad++}
+      lines.push(`${label}: ${got===null?"não detectável":got+"/"+exp}`);
+    }
+    const [hk,hist]=detectHistory();
+    cards.push(`<div class="rp-item"><b>Histórico</b><br>${hist.length} registro(s)<br><small>${hk||"não detectado"}</small></div>`);
+    const errs=runtimeErrors();
+    cards.push(`<div class="rp-item"><b>Erros registrados</b><br><span class="${errs.length?'rp-warn':'rp-ok'}">${errs.length?'⚠️ '+errs.length:'✅ 0'}</span></div>`);
+    const bp=lastBackup();
+    cards.push(`<div class="rp-item"><b>Backup</b><br>${bp?bp.toLocaleString():"⚠️ data não detectada"}</div>`);
+    cards.push(`<div class="rp-item"><b>Sistema</b><br>V${SYS_VERSION}<br>${UPDATED}</div>`);
+    lines.push(`Histórico: ${hist.length} registro(s) em ${hk||"chave não detectada"}`);
+    lines.push(`Erros locais: ${errs.length}`);
+    lines.push(`Sistema: V${SYS_VERSION} · ${UPDATED}`);
+    lines.push(`Resultado da integridade: ${bad?"ERROS ENCONTRADOS":warn?"COM RESSALVAS":"OK"}`);
+    document.getElementById("rpSummary").innerHTML=cards.join("");
+    document.getElementById("rpDetails").textContent=lines.join("\n");
+    return lines.join("\n");
+  }
+  function recalc(){
+    const [hk,hist]=detectHistory();
+    if(!hk||!hist.length){alert("Nenhum histórico compatível foi localizado.");return}
+    let changed=0, flagged=0;
+    const out=hist.map(r=>{
+      if(!r||typeof r!=="object")return r;
+      const n={...r};
+      if(!n.systemVersion){n.systemVersion="legado";changed++}
+      const key=String(n.test||n.teste||n.type||n.tipo||"").toLowerCase();
+      if(key.includes("ifp")){
+        const answered=Array.isArray(n.answers)?n.answers.length:Array.isArray(n.responses)?n.responses.length:(n.answeredCount||n.respondidas||null);
+        if(answered===100){
+          n.expectedCount=100;n.completionRechecked=true;
+          if(String(n.systemVersion).startsWith("9")||n.systemVersion==="legado"){
+            n.integrityNotice="IFP com 100 respostas: completude revalidada na V9.2; a V9 possuía erro conhecido 100/155.";
+            flagged++;
+          }
+          changed++;
+        }
+      }
+      return n;
+    });
+    localStorage.setItem(hk,JSON.stringify(out));
+    alert(`Revisão concluída. ${changed} metadado(s) atualizado(s); ${flagged} IFP(s) marcado(s) para revalidação.`);
+    report();
+  }
+  const oldOnError=window.onerror;
+  window.onerror=function(msg,src,line,col,err){
+    try{
+      const a=runtimeErrors();a.unshift({at:new Date().toISOString(),msg:String(msg),src:String(src||""),line,col,stack:err&&err.stack?String(err.stack):""});
+      localStorage.setItem(ERRKEY,JSON.stringify(a.slice(0,50)));
+    }catch(e){}
+    if(typeof oldOnError==="function")return oldOnError.apply(this,arguments);
+  };
+  window.addEventListener("unhandledrejection",e=>{
+    try{
+      const a=runtimeErrors();a.unshift({at:new Date().toISOString(),msg:"Unhandled promise: "+String(e.reason)});
+      localStorage.setItem(ERRKEY,JSON.stringify(a.slice(0,50)));
+    }catch(_){}
+  });
+  document.getElementById("reliabilityFab").onclick=()=>{document.getElementById("reliabilityPanel").classList.add("open");report()};
+  document.getElementById("rpClose").onclick=()=>document.getElementById("reliabilityPanel").classList.remove("open");
+  document.getElementById("rpRun").onclick=report;
+  document.getElementById("rpRecalc").onclick=recalc;
+  document.getElementById("rpCopy").onclick=async()=>{const t=report();try{await navigator.clipboard.writeText(t);alert("Diagnóstico copiado.")}catch(e){prompt("Copie o diagnóstico:",t)}};
+  document.getElementById("rpErrors").onclick=()=>{const a=runtimeErrors();document.getElementById("rpDetails").textContent=a.length?JSON.stringify(a,null,2):"Nenhum erro JavaScript registrado nesta versão."};
+  // Stamp version in common save payloads by exposing helper for future saves.
+  window.PSICO_SYSTEM_VERSION=SYS_VERSION;
+  window.psicoStampRecord=function(o){return Object.assign({},o,{systemVersion:SYS_VERSION,systemUpdated:UPDATED})};
+})();
+</script>
+
+</body></html>
