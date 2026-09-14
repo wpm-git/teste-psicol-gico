@@ -695,7 +695,7 @@ function pdfWindow(x,full=true){const txt=full?buildAIReport(x):buildSummaryRepo
 <div id="reliabilityPanel" aria-hidden="true">
   <div class="rp-card">
     <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
-      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 9.2 · Atualizado em 14/09/2026</small></div>
+      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 10.0 · Atualizado em 14/09/2026</small></div>
       <button type="button" id="rpClose">✕ Fechar</button>
     </div>
     <p>Verifica a estrutura dos testes, histórico, versões, backup e erros locais. Não altera respostas ao executar o diagnóstico.</p>
@@ -842,6 +842,142 @@ function pdfWindow(x,full=true){const txt=full?buildAIReport(x):buildSummaryRepo
   // Stamp version in common save payloads by exposing helper for future saves.
   window.PSICO_SYSTEM_VERSION=SYS_VERSION;
   window.psicoStampRecord=function(o){return Object.assign({},o,{systemVersion:SYS_VERSION,systemUpdated:UPDATED})};
+})();
+</script>
+
+
+<style id="v10style">
+:root{--v10good:#22c55e;--v10warn:#f59e0b;--v10bad:#ef4444}
+#v10Tools{position:fixed;left:14px;bottom:14px;z-index:9988;display:flex;gap:6px;flex-wrap:wrap}
+#v10Tools button{border-radius:999px;padding:8px 11px;font-size:11px}
+.v10modal{position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:99998;display:none;align-items:center;justify-content:center;padding:14px}
+.v10modal.open{display:flex}.v10box{width:min(1000px,100%);max-height:90vh;overflow:auto;background:var(--surface,#111820);border:1px solid var(--line,#334155);border-radius:18px;padding:18px}
+.v10qmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;margin:12px 0}
+.v10qmap button{padding:9px 4px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--text)}
+.v10qmap button.answered{outline:2px solid var(--v10good)}.v10qmap button.flagged{box-shadow:inset 0 -4px 0 var(--v10warn)}
+.v10qmap button.missing{opacity:.55}.v10review{float:right;margin-left:8px;font-size:11px!important;padding:5px 7px!important}
+body.v10focus header,body.v10focus footer,body.v10focus #v10Tools,body.v10focus #reliabilityFab{display:none!important}
+body.v10focus main{max-width:900px;margin:auto}.v10status{display:inline-block;padding:4px 8px;border:1px solid var(--line);border-radius:999px;font-size:10px;font-weight:800}
+.v10timeline{display:grid;gap:8px}.v10event{border-left:3px solid var(--line);padding:8px 12px;background:var(--surface2);border-radius:0 10px 10px 0}
+.v10heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:4px}.v10heat span{padding:6px 2px;text-align:center;border-radius:6px;background:rgba(148,163,184,.12);font-size:10px}
+@media(max-width:720px){#v10Tools{left:8px;right:8px;bottom:8px}.v10box{padding:12px}.v10qmap{grid-template-columns:repeat(6,1fr)}}
+</style>
+<div id="v10Tools">
+ <button type="button" id="v10MapBtn">🗺️ Questões</button>
+ <button type="button" id="v10FocusBtn">👁️ Foco</button>
+ <button type="button" id="v10HubBtn">🧰 Central V10</button>
+</div>
+<div class="v10modal" id="v10Map"><div class="v10box"><div style="display:flex;justify-content:space-between;gap:10px"><h2>🗺️ Mapa e revisão</h2><button id="v10MapClose">✕</button></div><div id="v10MapStats"></div><div id="v10MapGrid" class="v10qmap"></div><p class="note">Contorno verde = respondida · marca inferior = revisar. O mapa não avalia se uma alternativa é adequada.</p></div></div>
+<div class="v10modal" id="v10Hub"><div class="v10box"><div style="display:flex;justify-content:space-between;gap:10px"><div><h2>🧰 Central V10</h2><small>Versão 10.0 · Atualizado em 14/09/2026</small></div><button id="v10HubClose">✕</button></div>
+<div class="grid" style="margin-top:12px">
+ <button class="cardbtn" id="v10Timeline"><h2>📅 Linha do tempo</h2><p>Aplicações e evolução cronológica</p></button>
+ <button class="cardbtn" id="v10Stats"><h2>📊 Estatísticas</h2><p>Frequência, completos/parciais e duração</p></button>
+ <button class="cardbtn" id="v10Privacy"><h2>🔐 Privacidade</h2><p>Sessão privada, bloqueio e dados</p></button>
+ <button class="cardbtn" id="v10Data"><h2>📦 Dados</h2><p>CSV, JSON seletivo, duplicatas e snapshots</p></button>
+ <button class="cardbtn" id="v10Dev"><h2>🛠️ Desenvolvedor</h2><p>Integridade, IDs, bases e auditoria</p></button>
+ <button class="cardbtn" id="v10About"><h2>ℹ️ Sobre</h2><p>Finalidade, limitações e changelog</p></button>
+</div><div id="v10HubContent" style="margin-top:14px"></div></div></div>
+<script>
+(function(){
+ const V="10.0", TODAY="14/09/2026";
+ const S=localStorage, FLAGS="psy_v10_flags", META="psy_v10_meta", SNAP="psy_v10_snapshot";
+ let bypassFinalize=false, hiddenAt=0;
+ function jget(k,d){try{return JSON.parse(S.getItem(k)||JSON.stringify(d))}catch(e){return d}}
+ function jset(k,v){S.setItem(k,JSON.stringify(v))}
+ function flags(){return jget(FLAGS,{})}
+ function allHist(){
+   const out=[];["eata","ifp","bfp","neo","neoffi","palo"].forEach(t=>{
+     let a=[];try{a=JSON.parse(S.getItem("psy_"+t)||"[]")}catch(e){}
+     a.forEach((x,i)=>out.push({...x,_test:t,_idx:i}));
+   }); return out.sort((a,b)=>(b.id||0)-(a.id||0));
+ }
+ function currentQuestions(){return [...document.querySelectorAll('#qs .q')]}
+ function currentRadios(){return [...document.querySelectorAll('#qs input[type=radio]')]}
+ function qStatus(){
+   const qs=currentQuestions(), f=flags(), t=window.currentTest||"test";
+   return qs.map((q,i)=>({i,answered:!!q.querySelector('input[type=radio]:checked'),flagged:!!f[t+"_"+i]}));
+ }
+ function renderMap(){
+   const a=qStatus(), grid=document.getElementById("v10MapGrid"), st=document.getElementById("v10MapStats");
+   if(!a.length){st.innerHTML='<p>Nenhum questionário aberto.</p>';grid.innerHTML='';return}
+   st.innerHTML=`<b>${a.filter(x=>x.answered).length}/${a.length} respondidas</b> · 🚩 ${a.filter(x=>x.flagged).length} marcadas para revisão`;
+   grid.innerHTML=a.map(x=>`<button data-i="${x.i}" class="${x.answered?'answered':'missing'} ${x.flagged?'flagged':''}">${x.i+1}</button>`).join("");
+   grid.querySelectorAll("button").forEach(b=>b.onclick=()=>{const q=currentQuestions()[+b.dataset.i];document.getElementById("v10Map").classList.remove("open");q&&q.scrollIntoView({behavior:"smooth",block:"center"})});
+ }
+ function decorateQuestions(){
+   const t=window.currentTest||"test", f=flags();
+   currentQuestions().forEach((q,i)=>{
+     if(q.querySelector(".v10review"))return;
+     const b=document.createElement("button");b.type="button";b.className="v10review secondary";b.textContent=f[t+"_"+i]?"🚩 Revisar":"⚑ Revisar";
+     b.onclick=()=>{const x=flags(),k=t+"_"+i;x[k]=!x[k];jset(FLAGS,x);b.textContent=x[k]?"🚩 Revisar":"⚑ Revisar"};
+     q.prepend(b);
+   });
+ }
+ function finalReview(e){
+   const calc=e.target.closest&&e.target.closest("#calc"); if(!calc||bypassFinalize)return;
+   const a=qStatus(); if(!a.length)return;
+   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+   const missing=a.filter(x=>!x.answered), marked=a.filter(x=>x.flagged);
+   const time=(typeof elapsed==="function"?elapsed():0);
+   const msg=`REVISÃO FINAL\n\nRespondidas: ${a.length-missing.length}/${a.length}\nNão respondidas: ${missing.length}\nMarcadas para revisar: ${marked.length}\nTempo: ${typeof fmtTime==="function"?fmtTime(time):time+" s"}\n\n${missing.length?"Existem questões sem resposta. ":""}Deseja finalizar e calcular?`;
+   if(confirm(msg)){bypassFinalize=true;calc.click();setTimeout(()=>bypassFinalize=false,0)}
+ }
+ document.addEventListener("click",finalReview,true);
+ new MutationObserver(()=>decorateQuestions()).observe(document.body,{childList:true,subtree:true});
+ document.addEventListener("change",e=>{if(e.target.matches&&e.target.matches('#qs input[type=radio]')){const meta=jget(META,{});meta.changes=(meta.changes||0)+1;meta.lastChange=Date.now();jset(META,meta)}});
+ document.addEventListener("visibilitychange",()=>{const m=jget(META,{interruptions:[],awayMs:0});if(document.hidden)hiddenAt=Date.now();else if(hiddenAt){const d=Date.now()-hiddenAt;m.interruptions.push({at:new Date().toISOString(),ms:d});m.awayMs=(m.awayMs||0)+d;hiddenAt=0;jset(META,m)}});
+ document.getElementById("v10MapBtn").onclick=()=>{renderMap();document.getElementById("v10Map").classList.add("open")};
+ document.getElementById("v10MapClose").onclick=()=>document.getElementById("v10Map").classList.remove("open");
+ document.getElementById("v10FocusBtn").onclick=()=>document.body.classList.toggle("v10focus");
+ document.getElementById("v10HubBtn").onclick=()=>document.getElementById("v10Hub").classList.add("open");
+ document.getElementById("v10HubClose").onclick=()=>document.getElementById("v10Hub").classList.remove("open");
+ function content(h){document.getElementById("v10HubContent").innerHTML=h}
+ function escx(s){return String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]))}
+ document.getElementById("v10Timeline").onclick=()=>{
+   const h=allHist();content(`<div class="panel"><h3>📅 Linha do tempo</h3><div class="v10timeline">${h.length?h.slice(0,100).map(x=>`<div class="v10event"><b>${escx((x._test||"").toUpperCase())}</b> · ${escx(x.date||"sem data")}<br><small>${escx(x.out||x.summary||"")} · versão ${escx(x.systemVersion||x.schemaVersion||"legado")}</small></div>`).join(""):"Nenhuma aplicação."}</div></div>`)
+ };
+ document.getElementById("v10Stats").onclick=()=>{
+   const h=allHist(), full=h.filter(x=>!String(x.out||"").includes("PARCIAL")), partial=h.length-full.length, sec=h.reduce((a,x)=>a+(+x.time||0),0);
+   const by={};h.forEach(x=>by[x._test]=(by[x._test]||0)+1);
+   content(`<div class="panel"><h3>📊 Estatísticas pessoais</h3><div class="master-summary"><div><b>${h.length}</b><br>aplicações</div><div><b>${full.length}</b><br>completas</div><div><b>${partial}</b><br>parciais</div><div><b>${(sec/3600).toFixed(1)} h</b><br>registradas</div></div><p>${Object.entries(by).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join(" · ")||"Sem dados"}</p><p class="note">As estatísticas comparam sua própria atividade. Escalas de instrumentos diferentes não são tratadas como equivalentes.</p></div>`)
+ };
+ document.getElementById("v10Privacy").onclick=()=>{
+   const c=jget("psy_v10_privacy",{privateSession:false,autoLock:0});
+   content(`<div class="panel"><h3>🔐 Privacidade</h3><label><input id="v10Private" type="checkbox" style="width:auto" ${c.privateSession?"checked":""}> Sessão privada: novos registros podem ser descartados após a sessão</label><label>Bloqueio automático por inatividade (minutos; 0 desativa)<input id="v10LockMin" type="number" min="0" value="${c.autoLock||0}"></label><button id="v10SavePriv" class="primary">Salvar</button><p class="note">Os históricos permanecem no armazenamento local do navegador, salvo quando você exporta ou compartilha um arquivo.</p></div>`);
+   document.getElementById("v10SavePriv").onclick=()=>{jset("psy_v10_privacy",{privateSession:document.getElementById("v10Private").checked,autoLock:+document.getElementById("v10LockMin").value||0});alert("Privacidade atualizada.")};
+ };
+ function csv(){
+   const h=allHist(), rows=[["teste","data","resultado","resumo","tempo_s","versao"]];
+   h.forEach(x=>rows.push([x._test,x.date||"",x.out||"",x.summary||"",x.time||"",x.systemVersion||x.schemaVersion||""]));
+   return rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+ }
+ function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:type||"text/plain"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+ document.getElementById("v10Data").onclick=()=>{
+   content(`<div class="panel"><h3>📦 Dados e segurança</h3><button id="v10CSV">⬇️ Exportar CSV</button> <button id="v10JSON">⬇️ Exportar JSON por testes</button> <button id="v10Snap">📸 Criar snapshot</button> <button id="v10Dedup">🧹 Detectar duplicatas</button><p id="v10DataMsg" class="note"></p></div>`);
+   document.getElementById("v10CSV").onclick=()=>dl("historico-psicologico-v10.csv",csv(),"text/csv");
+   document.getElementById("v10JSON").onclick=()=>{const o={version:V,exported:new Date().toISOString(),tests:{}};["eata","ifp","bfp","neo","neoffi","palo"].forEach(t=>o.tests[t]=jget("psy_"+t,[]));dl("dados-seletivos-v10.json",JSON.stringify(o,null,2),"application/json")};
+   document.getElementById("v10Snap").onclick=()=>{const o={at:new Date().toISOString(),data:{}};for(let i=0;i<S.length;i++){const k=S.key(i);if(k&&k.startsWith("psy_"))o.data[k]=S.getItem(k)}jset(SNAP,o);document.getElementById("v10DataMsg").textContent="Snapshot interno criado em "+new Date().toLocaleString("pt-BR")};
+   document.getElementById("v10Dedup").onclick=()=>{const h=allHist(),seen=new Set(),dups=[];h.forEach(x=>{const k=x._test+"|"+(x.id||"")+"|"+(x.date||"");if(seen.has(k))dups.push(k);seen.add(k)});document.getElementById("v10DataMsg").textContent=dups.length?`${dups.length} possível(is) duplicata(s) detectada(s). Nenhum dado foi apagado.`:"Nenhuma duplicata óbvia detectada."};
+ };
+ document.getElementById("v10Dev").onclick=()=>{
+   const expected={eata:40,ifp:100,bfp:126,neo:240,neoffi:60}, names={eata:["eataQ"],ifp:["ifpQ"],bfp:["bfpQ"],neo:["neoQ"],neoffi:["neoffiQ","neoFfiQ"]};
+   let lines=[];for(const [t,n] of Object.entries(expected)){let a=null;for(const nm of names[t])if(Array.isArray(window[nm]))a=window[nm];lines.push(`${t.toUpperCase()}: ${a?a.length:"base encapsulada"} / esperado ${n}`)}
+   const errs=jget("psico_runtime_errors_v92",[]);
+   content(`<div class="panel"><h3>🛠️ Modo desenvolvedor</h3><pre style="white-space:pre-wrap">${escx(lines.join("\n"))}</pre><p>Erros registrados: ${errs.length}</p><button id="v10AuditTxt">📄 Exportar auditoria</button><p class="note">O diagnóstico não modifica pontuação nem critérios.</p></div>`);
+   document.getElementById("v10AuditTxt").onclick=()=>dl("auditoria-v10.txt",`PSICO SEGURANÇA V${V}\n${TODAY}\n\n${lines.join("\n")}\n\nHistóricos: ${allHist().length}\nErros: ${errs.length}`);
+ };
+ document.getElementById("v10About").onclick=()=>content(`<div class="panel"><h3>ℹ️ Sobre</h3><p><b>Psico Segurança · V${V}</b><br>Atualizado em ${TODAY}</p><p>Ferramenta educacional de treinamento para concursos da Segurança Pública. Não substitui avaliação psicológica, laudo ou decisão de psicólogo habilitado.</p><h4>V10</h4><p>Revisão final, mapa de questões, marcação para revisão, modo foco, registro de interrupções, estatísticas, linha do tempo, exportações, snapshots, detecção de duplicatas, central de privacidade, modo desenvolvedor e auditoria.</p><p class="note">Resultados “apto provável/inapto provável” em relatórios de IA são estimativas educacionais e devem respeitar a qualidade e suficiência dos dados.</p></div>`);
+ // Stamp records created through the core done()
+ if(typeof window.done==="function"){
+   const od=window.done;window.done=function(t,x,n){
+     const m=jget(META,{interruptions:[],awayMs:0,changes:0});
+     x.systemVersion=V;x.systemUpdated=TODAY;x.interruptions=m.interruptions||[];x.awayMs=m.awayMs||0;x.answerChanges=m.changes||0;
+     x.qualityGrade=(n&&window.currentCount&&n===window.currentCount&&x.awayMs<120000)?"A":(n&&window.currentCount&&n===window.currentCount)?"B":"D";
+     jset(META,{interruptions:[],awayMs:0,changes:0});return od(t,x,n)
+   }
+ }
+ // automatic structural self-check at startup
+ setTimeout(()=>{const bad=[];try{if(typeof D!=="undefined"&&D.ifpQ&&D.ifpQ.length!==100)bad.push("IFP "+D.ifpQ.length+"/100");if(typeof D!=="undefined"&&D.eataQ&&D.eataQ.length!==40)bad.push("EATA "+D.eataQ.length+"/40")}catch(e){}if(bad.length)alert("⚠️ Integridade: "+bad.join(", "))},900);
 })();
 </script>
 
@@ -1009,7 +1145,7 @@ function paloReportPDF(d){const text=paloReportText(d),w=window.open('','_blank'
 <div id="reliabilityPanel" aria-hidden="true">
   <div class="rp-card">
     <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
-      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 9.2 · Atualizado em 14/09/2026</small></div>
+      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 10.0 · Atualizado em 14/09/2026</small></div>
       <button type="button" id="rpClose">✕ Fechar</button>
     </div>
     <p>Verifica a estrutura dos testes, histórico, versões, backup e erros locais. Não altera respostas ao executar o diagnóstico.</p>
@@ -1156,6 +1292,142 @@ function paloReportPDF(d){const text=paloReportText(d),w=window.open('','_blank'
   // Stamp version in common save payloads by exposing helper for future saves.
   window.PSICO_SYSTEM_VERSION=SYS_VERSION;
   window.psicoStampRecord=function(o){return Object.assign({},o,{systemVersion:SYS_VERSION,systemUpdated:UPDATED})};
+})();
+</script>
+
+
+<style id="v10style">
+:root{--v10good:#22c55e;--v10warn:#f59e0b;--v10bad:#ef4444}
+#v10Tools{position:fixed;left:14px;bottom:14px;z-index:9988;display:flex;gap:6px;flex-wrap:wrap}
+#v10Tools button{border-radius:999px;padding:8px 11px;font-size:11px}
+.v10modal{position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:99998;display:none;align-items:center;justify-content:center;padding:14px}
+.v10modal.open{display:flex}.v10box{width:min(1000px,100%);max-height:90vh;overflow:auto;background:var(--surface,#111820);border:1px solid var(--line,#334155);border-radius:18px;padding:18px}
+.v10qmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;margin:12px 0}
+.v10qmap button{padding:9px 4px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--text)}
+.v10qmap button.answered{outline:2px solid var(--v10good)}.v10qmap button.flagged{box-shadow:inset 0 -4px 0 var(--v10warn)}
+.v10qmap button.missing{opacity:.55}.v10review{float:right;margin-left:8px;font-size:11px!important;padding:5px 7px!important}
+body.v10focus header,body.v10focus footer,body.v10focus #v10Tools,body.v10focus #reliabilityFab{display:none!important}
+body.v10focus main{max-width:900px;margin:auto}.v10status{display:inline-block;padding:4px 8px;border:1px solid var(--line);border-radius:999px;font-size:10px;font-weight:800}
+.v10timeline{display:grid;gap:8px}.v10event{border-left:3px solid var(--line);padding:8px 12px;background:var(--surface2);border-radius:0 10px 10px 0}
+.v10heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:4px}.v10heat span{padding:6px 2px;text-align:center;border-radius:6px;background:rgba(148,163,184,.12);font-size:10px}
+@media(max-width:720px){#v10Tools{left:8px;right:8px;bottom:8px}.v10box{padding:12px}.v10qmap{grid-template-columns:repeat(6,1fr)}}
+</style>
+<div id="v10Tools">
+ <button type="button" id="v10MapBtn">🗺️ Questões</button>
+ <button type="button" id="v10FocusBtn">👁️ Foco</button>
+ <button type="button" id="v10HubBtn">🧰 Central V10</button>
+</div>
+<div class="v10modal" id="v10Map"><div class="v10box"><div style="display:flex;justify-content:space-between;gap:10px"><h2>🗺️ Mapa e revisão</h2><button id="v10MapClose">✕</button></div><div id="v10MapStats"></div><div id="v10MapGrid" class="v10qmap"></div><p class="note">Contorno verde = respondida · marca inferior = revisar. O mapa não avalia se uma alternativa é adequada.</p></div></div>
+<div class="v10modal" id="v10Hub"><div class="v10box"><div style="display:flex;justify-content:space-between;gap:10px"><div><h2>🧰 Central V10</h2><small>Versão 10.0 · Atualizado em 14/09/2026</small></div><button id="v10HubClose">✕</button></div>
+<div class="grid" style="margin-top:12px">
+ <button class="cardbtn" id="v10Timeline"><h2>📅 Linha do tempo</h2><p>Aplicações e evolução cronológica</p></button>
+ <button class="cardbtn" id="v10Stats"><h2>📊 Estatísticas</h2><p>Frequência, completos/parciais e duração</p></button>
+ <button class="cardbtn" id="v10Privacy"><h2>🔐 Privacidade</h2><p>Sessão privada, bloqueio e dados</p></button>
+ <button class="cardbtn" id="v10Data"><h2>📦 Dados</h2><p>CSV, JSON seletivo, duplicatas e snapshots</p></button>
+ <button class="cardbtn" id="v10Dev"><h2>🛠️ Desenvolvedor</h2><p>Integridade, IDs, bases e auditoria</p></button>
+ <button class="cardbtn" id="v10About"><h2>ℹ️ Sobre</h2><p>Finalidade, limitações e changelog</p></button>
+</div><div id="v10HubContent" style="margin-top:14px"></div></div></div>
+<script>
+(function(){
+ const V="10.0", TODAY="14/09/2026";
+ const S=localStorage, FLAGS="psy_v10_flags", META="psy_v10_meta", SNAP="psy_v10_snapshot";
+ let bypassFinalize=false, hiddenAt=0;
+ function jget(k,d){try{return JSON.parse(S.getItem(k)||JSON.stringify(d))}catch(e){return d}}
+ function jset(k,v){S.setItem(k,JSON.stringify(v))}
+ function flags(){return jget(FLAGS,{})}
+ function allHist(){
+   const out=[];["eata","ifp","bfp","neo","neoffi","palo"].forEach(t=>{
+     let a=[];try{a=JSON.parse(S.getItem("psy_"+t)||"[]")}catch(e){}
+     a.forEach((x,i)=>out.push({...x,_test:t,_idx:i}));
+   }); return out.sort((a,b)=>(b.id||0)-(a.id||0));
+ }
+ function currentQuestions(){return [...document.querySelectorAll('#qs .q')]}
+ function currentRadios(){return [...document.querySelectorAll('#qs input[type=radio]')]}
+ function qStatus(){
+   const qs=currentQuestions(), f=flags(), t=window.currentTest||"test";
+   return qs.map((q,i)=>({i,answered:!!q.querySelector('input[type=radio]:checked'),flagged:!!f[t+"_"+i]}));
+ }
+ function renderMap(){
+   const a=qStatus(), grid=document.getElementById("v10MapGrid"), st=document.getElementById("v10MapStats");
+   if(!a.length){st.innerHTML='<p>Nenhum questionário aberto.</p>';grid.innerHTML='';return}
+   st.innerHTML=`<b>${a.filter(x=>x.answered).length}/${a.length} respondidas</b> · 🚩 ${a.filter(x=>x.flagged).length} marcadas para revisão`;
+   grid.innerHTML=a.map(x=>`<button data-i="${x.i}" class="${x.answered?'answered':'missing'} ${x.flagged?'flagged':''}">${x.i+1}</button>`).join("");
+   grid.querySelectorAll("button").forEach(b=>b.onclick=()=>{const q=currentQuestions()[+b.dataset.i];document.getElementById("v10Map").classList.remove("open");q&&q.scrollIntoView({behavior:"smooth",block:"center"})});
+ }
+ function decorateQuestions(){
+   const t=window.currentTest||"test", f=flags();
+   currentQuestions().forEach((q,i)=>{
+     if(q.querySelector(".v10review"))return;
+     const b=document.createElement("button");b.type="button";b.className="v10review secondary";b.textContent=f[t+"_"+i]?"🚩 Revisar":"⚑ Revisar";
+     b.onclick=()=>{const x=flags(),k=t+"_"+i;x[k]=!x[k];jset(FLAGS,x);b.textContent=x[k]?"🚩 Revisar":"⚑ Revisar"};
+     q.prepend(b);
+   });
+ }
+ function finalReview(e){
+   const calc=e.target.closest&&e.target.closest("#calc"); if(!calc||bypassFinalize)return;
+   const a=qStatus(); if(!a.length)return;
+   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+   const missing=a.filter(x=>!x.answered), marked=a.filter(x=>x.flagged);
+   const time=(typeof elapsed==="function"?elapsed():0);
+   const msg=`REVISÃO FINAL\n\nRespondidas: ${a.length-missing.length}/${a.length}\nNão respondidas: ${missing.length}\nMarcadas para revisar: ${marked.length}\nTempo: ${typeof fmtTime==="function"?fmtTime(time):time+" s"}\n\n${missing.length?"Existem questões sem resposta. ":""}Deseja finalizar e calcular?`;
+   if(confirm(msg)){bypassFinalize=true;calc.click();setTimeout(()=>bypassFinalize=false,0)}
+ }
+ document.addEventListener("click",finalReview,true);
+ new MutationObserver(()=>decorateQuestions()).observe(document.body,{childList:true,subtree:true});
+ document.addEventListener("change",e=>{if(e.target.matches&&e.target.matches('#qs input[type=radio]')){const meta=jget(META,{});meta.changes=(meta.changes||0)+1;meta.lastChange=Date.now();jset(META,meta)}});
+ document.addEventListener("visibilitychange",()=>{const m=jget(META,{interruptions:[],awayMs:0});if(document.hidden)hiddenAt=Date.now();else if(hiddenAt){const d=Date.now()-hiddenAt;m.interruptions.push({at:new Date().toISOString(),ms:d});m.awayMs=(m.awayMs||0)+d;hiddenAt=0;jset(META,m)}});
+ document.getElementById("v10MapBtn").onclick=()=>{renderMap();document.getElementById("v10Map").classList.add("open")};
+ document.getElementById("v10MapClose").onclick=()=>document.getElementById("v10Map").classList.remove("open");
+ document.getElementById("v10FocusBtn").onclick=()=>document.body.classList.toggle("v10focus");
+ document.getElementById("v10HubBtn").onclick=()=>document.getElementById("v10Hub").classList.add("open");
+ document.getElementById("v10HubClose").onclick=()=>document.getElementById("v10Hub").classList.remove("open");
+ function content(h){document.getElementById("v10HubContent").innerHTML=h}
+ function escx(s){return String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]))}
+ document.getElementById("v10Timeline").onclick=()=>{
+   const h=allHist();content(`<div class="panel"><h3>📅 Linha do tempo</h3><div class="v10timeline">${h.length?h.slice(0,100).map(x=>`<div class="v10event"><b>${escx((x._test||"").toUpperCase())}</b> · ${escx(x.date||"sem data")}<br><small>${escx(x.out||x.summary||"")} · versão ${escx(x.systemVersion||x.schemaVersion||"legado")}</small></div>`).join(""):"Nenhuma aplicação."}</div></div>`)
+ };
+ document.getElementById("v10Stats").onclick=()=>{
+   const h=allHist(), full=h.filter(x=>!String(x.out||"").includes("PARCIAL")), partial=h.length-full.length, sec=h.reduce((a,x)=>a+(+x.time||0),0);
+   const by={};h.forEach(x=>by[x._test]=(by[x._test]||0)+1);
+   content(`<div class="panel"><h3>📊 Estatísticas pessoais</h3><div class="master-summary"><div><b>${h.length}</b><br>aplicações</div><div><b>${full.length}</b><br>completas</div><div><b>${partial}</b><br>parciais</div><div><b>${(sec/3600).toFixed(1)} h</b><br>registradas</div></div><p>${Object.entries(by).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join(" · ")||"Sem dados"}</p><p class="note">As estatísticas comparam sua própria atividade. Escalas de instrumentos diferentes não são tratadas como equivalentes.</p></div>`)
+ };
+ document.getElementById("v10Privacy").onclick=()=>{
+   const c=jget("psy_v10_privacy",{privateSession:false,autoLock:0});
+   content(`<div class="panel"><h3>🔐 Privacidade</h3><label><input id="v10Private" type="checkbox" style="width:auto" ${c.privateSession?"checked":""}> Sessão privada: novos registros podem ser descartados após a sessão</label><label>Bloqueio automático por inatividade (minutos; 0 desativa)<input id="v10LockMin" type="number" min="0" value="${c.autoLock||0}"></label><button id="v10SavePriv" class="primary">Salvar</button><p class="note">Os históricos permanecem no armazenamento local do navegador, salvo quando você exporta ou compartilha um arquivo.</p></div>`);
+   document.getElementById("v10SavePriv").onclick=()=>{jset("psy_v10_privacy",{privateSession:document.getElementById("v10Private").checked,autoLock:+document.getElementById("v10LockMin").value||0});alert("Privacidade atualizada.")};
+ };
+ function csv(){
+   const h=allHist(), rows=[["teste","data","resultado","resumo","tempo_s","versao"]];
+   h.forEach(x=>rows.push([x._test,x.date||"",x.out||"",x.summary||"",x.time||"",x.systemVersion||x.schemaVersion||""]));
+   return rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+ }
+ function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:type||"text/plain"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+ document.getElementById("v10Data").onclick=()=>{
+   content(`<div class="panel"><h3>📦 Dados e segurança</h3><button id="v10CSV">⬇️ Exportar CSV</button> <button id="v10JSON">⬇️ Exportar JSON por testes</button> <button id="v10Snap">📸 Criar snapshot</button> <button id="v10Dedup">🧹 Detectar duplicatas</button><p id="v10DataMsg" class="note"></p></div>`);
+   document.getElementById("v10CSV").onclick=()=>dl("historico-psicologico-v10.csv",csv(),"text/csv");
+   document.getElementById("v10JSON").onclick=()=>{const o={version:V,exported:new Date().toISOString(),tests:{}};["eata","ifp","bfp","neo","neoffi","palo"].forEach(t=>o.tests[t]=jget("psy_"+t,[]));dl("dados-seletivos-v10.json",JSON.stringify(o,null,2),"application/json")};
+   document.getElementById("v10Snap").onclick=()=>{const o={at:new Date().toISOString(),data:{}};for(let i=0;i<S.length;i++){const k=S.key(i);if(k&&k.startsWith("psy_"))o.data[k]=S.getItem(k)}jset(SNAP,o);document.getElementById("v10DataMsg").textContent="Snapshot interno criado em "+new Date().toLocaleString("pt-BR")};
+   document.getElementById("v10Dedup").onclick=()=>{const h=allHist(),seen=new Set(),dups=[];h.forEach(x=>{const k=x._test+"|"+(x.id||"")+"|"+(x.date||"");if(seen.has(k))dups.push(k);seen.add(k)});document.getElementById("v10DataMsg").textContent=dups.length?`${dups.length} possível(is) duplicata(s) detectada(s). Nenhum dado foi apagado.`:"Nenhuma duplicata óbvia detectada."};
+ };
+ document.getElementById("v10Dev").onclick=()=>{
+   const expected={eata:40,ifp:100,bfp:126,neo:240,neoffi:60}, names={eata:["eataQ"],ifp:["ifpQ"],bfp:["bfpQ"],neo:["neoQ"],neoffi:["neoffiQ","neoFfiQ"]};
+   let lines=[];for(const [t,n] of Object.entries(expected)){let a=null;for(const nm of names[t])if(Array.isArray(window[nm]))a=window[nm];lines.push(`${t.toUpperCase()}: ${a?a.length:"base encapsulada"} / esperado ${n}`)}
+   const errs=jget("psico_runtime_errors_v92",[]);
+   content(`<div class="panel"><h3>🛠️ Modo desenvolvedor</h3><pre style="white-space:pre-wrap">${escx(lines.join("\n"))}</pre><p>Erros registrados: ${errs.length}</p><button id="v10AuditTxt">📄 Exportar auditoria</button><p class="note">O diagnóstico não modifica pontuação nem critérios.</p></div>`);
+   document.getElementById("v10AuditTxt").onclick=()=>dl("auditoria-v10.txt",`PSICO SEGURANÇA V${V}\n${TODAY}\n\n${lines.join("\n")}\n\nHistóricos: ${allHist().length}\nErros: ${errs.length}`);
+ };
+ document.getElementById("v10About").onclick=()=>content(`<div class="panel"><h3>ℹ️ Sobre</h3><p><b>Psico Segurança · V${V}</b><br>Atualizado em ${TODAY}</p><p>Ferramenta educacional de treinamento para concursos da Segurança Pública. Não substitui avaliação psicológica, laudo ou decisão de psicólogo habilitado.</p><h4>V10</h4><p>Revisão final, mapa de questões, marcação para revisão, modo foco, registro de interrupções, estatísticas, linha do tempo, exportações, snapshots, detecção de duplicatas, central de privacidade, modo desenvolvedor e auditoria.</p><p class="note">Resultados “apto provável/inapto provável” em relatórios de IA são estimativas educacionais e devem respeitar a qualidade e suficiência dos dados.</p></div>`);
+ // Stamp records created through the core done()
+ if(typeof window.done==="function"){
+   const od=window.done;window.done=function(t,x,n){
+     const m=jget(META,{interruptions:[],awayMs:0,changes:0});
+     x.systemVersion=V;x.systemUpdated=TODAY;x.interruptions=m.interruptions||[];x.awayMs=m.awayMs||0;x.answerChanges=m.changes||0;
+     x.qualityGrade=(n&&window.currentCount&&n===window.currentCount&&x.awayMs<120000)?"A":(n&&window.currentCount&&n===window.currentCount)?"B":"D";
+     jset(META,{interruptions:[],awayMs:0,changes:0});return od(t,x,n)
+   }
+ }
+ // automatic structural self-check at startup
+ setTimeout(()=>{const bad=[];try{if(typeof D!=="undefined"&&D.ifpQ&&D.ifpQ.length!==100)bad.push("IFP "+D.ifpQ.length+"/100");if(typeof D!=="undefined"&&D.eataQ&&D.eataQ.length!==40)bad.push("EATA "+D.eataQ.length+"/40")}catch(e){}if(bad.length)alert("⚠️ Integridade: "+bad.join(", "))},900);
 })();
 </script>
 
@@ -1282,7 +1554,7 @@ function printTextPDF(title,text){const w=window.open('','_blank');if(!w){alert(
 <div id="reliabilityPanel" aria-hidden="true">
   <div class="rp-card">
     <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
-      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 9.2 · Atualizado em 14/09/2026</small></div>
+      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 10.0 · Atualizado em 14/09/2026</small></div>
       <button type="button" id="rpClose">✕ Fechar</button>
     </div>
     <p>Verifica a estrutura dos testes, histórico, versões, backup e erros locais. Não altera respostas ao executar o diagnóstico.</p>
@@ -1432,6 +1704,142 @@ function printTextPDF(title,text){const w=window.open('','_blank');if(!w){alert(
 })();
 </script>
 
+
+<style id="v10style">
+:root{--v10good:#22c55e;--v10warn:#f59e0b;--v10bad:#ef4444}
+#v10Tools{position:fixed;left:14px;bottom:14px;z-index:9988;display:flex;gap:6px;flex-wrap:wrap}
+#v10Tools button{border-radius:999px;padding:8px 11px;font-size:11px}
+.v10modal{position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:99998;display:none;align-items:center;justify-content:center;padding:14px}
+.v10modal.open{display:flex}.v10box{width:min(1000px,100%);max-height:90vh;overflow:auto;background:var(--surface,#111820);border:1px solid var(--line,#334155);border-radius:18px;padding:18px}
+.v10qmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;margin:12px 0}
+.v10qmap button{padding:9px 4px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--text)}
+.v10qmap button.answered{outline:2px solid var(--v10good)}.v10qmap button.flagged{box-shadow:inset 0 -4px 0 var(--v10warn)}
+.v10qmap button.missing{opacity:.55}.v10review{float:right;margin-left:8px;font-size:11px!important;padding:5px 7px!important}
+body.v10focus header,body.v10focus footer,body.v10focus #v10Tools,body.v10focus #reliabilityFab{display:none!important}
+body.v10focus main{max-width:900px;margin:auto}.v10status{display:inline-block;padding:4px 8px;border:1px solid var(--line);border-radius:999px;font-size:10px;font-weight:800}
+.v10timeline{display:grid;gap:8px}.v10event{border-left:3px solid var(--line);padding:8px 12px;background:var(--surface2);border-radius:0 10px 10px 0}
+.v10heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:4px}.v10heat span{padding:6px 2px;text-align:center;border-radius:6px;background:rgba(148,163,184,.12);font-size:10px}
+@media(max-width:720px){#v10Tools{left:8px;right:8px;bottom:8px}.v10box{padding:12px}.v10qmap{grid-template-columns:repeat(6,1fr)}}
+</style>
+<div id="v10Tools">
+ <button type="button" id="v10MapBtn">🗺️ Questões</button>
+ <button type="button" id="v10FocusBtn">👁️ Foco</button>
+ <button type="button" id="v10HubBtn">🧰 Central V10</button>
+</div>
+<div class="v10modal" id="v10Map"><div class="v10box"><div style="display:flex;justify-content:space-between;gap:10px"><h2>🗺️ Mapa e revisão</h2><button id="v10MapClose">✕</button></div><div id="v10MapStats"></div><div id="v10MapGrid" class="v10qmap"></div><p class="note">Contorno verde = respondida · marca inferior = revisar. O mapa não avalia se uma alternativa é adequada.</p></div></div>
+<div class="v10modal" id="v10Hub"><div class="v10box"><div style="display:flex;justify-content:space-between;gap:10px"><div><h2>🧰 Central V10</h2><small>Versão 10.0 · Atualizado em 14/09/2026</small></div><button id="v10HubClose">✕</button></div>
+<div class="grid" style="margin-top:12px">
+ <button class="cardbtn" id="v10Timeline"><h2>📅 Linha do tempo</h2><p>Aplicações e evolução cronológica</p></button>
+ <button class="cardbtn" id="v10Stats"><h2>📊 Estatísticas</h2><p>Frequência, completos/parciais e duração</p></button>
+ <button class="cardbtn" id="v10Privacy"><h2>🔐 Privacidade</h2><p>Sessão privada, bloqueio e dados</p></button>
+ <button class="cardbtn" id="v10Data"><h2>📦 Dados</h2><p>CSV, JSON seletivo, duplicatas e snapshots</p></button>
+ <button class="cardbtn" id="v10Dev"><h2>🛠️ Desenvolvedor</h2><p>Integridade, IDs, bases e auditoria</p></button>
+ <button class="cardbtn" id="v10About"><h2>ℹ️ Sobre</h2><p>Finalidade, limitações e changelog</p></button>
+</div><div id="v10HubContent" style="margin-top:14px"></div></div></div>
+<script>
+(function(){
+ const V="10.0", TODAY="14/09/2026";
+ const S=localStorage, FLAGS="psy_v10_flags", META="psy_v10_meta", SNAP="psy_v10_snapshot";
+ let bypassFinalize=false, hiddenAt=0;
+ function jget(k,d){try{return JSON.parse(S.getItem(k)||JSON.stringify(d))}catch(e){return d}}
+ function jset(k,v){S.setItem(k,JSON.stringify(v))}
+ function flags(){return jget(FLAGS,{})}
+ function allHist(){
+   const out=[];["eata","ifp","bfp","neo","neoffi","palo"].forEach(t=>{
+     let a=[];try{a=JSON.parse(S.getItem("psy_"+t)||"[]")}catch(e){}
+     a.forEach((x,i)=>out.push({...x,_test:t,_idx:i}));
+   }); return out.sort((a,b)=>(b.id||0)-(a.id||0));
+ }
+ function currentQuestions(){return [...document.querySelectorAll('#qs .q')]}
+ function currentRadios(){return [...document.querySelectorAll('#qs input[type=radio]')]}
+ function qStatus(){
+   const qs=currentQuestions(), f=flags(), t=window.currentTest||"test";
+   return qs.map((q,i)=>({i,answered:!!q.querySelector('input[type=radio]:checked'),flagged:!!f[t+"_"+i]}));
+ }
+ function renderMap(){
+   const a=qStatus(), grid=document.getElementById("v10MapGrid"), st=document.getElementById("v10MapStats");
+   if(!a.length){st.innerHTML='<p>Nenhum questionário aberto.</p>';grid.innerHTML='';return}
+   st.innerHTML=`<b>${a.filter(x=>x.answered).length}/${a.length} respondidas</b> · 🚩 ${a.filter(x=>x.flagged).length} marcadas para revisão`;
+   grid.innerHTML=a.map(x=>`<button data-i="${x.i}" class="${x.answered?'answered':'missing'} ${x.flagged?'flagged':''}">${x.i+1}</button>`).join("");
+   grid.querySelectorAll("button").forEach(b=>b.onclick=()=>{const q=currentQuestions()[+b.dataset.i];document.getElementById("v10Map").classList.remove("open");q&&q.scrollIntoView({behavior:"smooth",block:"center"})});
+ }
+ function decorateQuestions(){
+   const t=window.currentTest||"test", f=flags();
+   currentQuestions().forEach((q,i)=>{
+     if(q.querySelector(".v10review"))return;
+     const b=document.createElement("button");b.type="button";b.className="v10review secondary";b.textContent=f[t+"_"+i]?"🚩 Revisar":"⚑ Revisar";
+     b.onclick=()=>{const x=flags(),k=t+"_"+i;x[k]=!x[k];jset(FLAGS,x);b.textContent=x[k]?"🚩 Revisar":"⚑ Revisar"};
+     q.prepend(b);
+   });
+ }
+ function finalReview(e){
+   const calc=e.target.closest&&e.target.closest("#calc"); if(!calc||bypassFinalize)return;
+   const a=qStatus(); if(!a.length)return;
+   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+   const missing=a.filter(x=>!x.answered), marked=a.filter(x=>x.flagged);
+   const time=(typeof elapsed==="function"?elapsed():0);
+   const msg=`REVISÃO FINAL\n\nRespondidas: ${a.length-missing.length}/${a.length}\nNão respondidas: ${missing.length}\nMarcadas para revisar: ${marked.length}\nTempo: ${typeof fmtTime==="function"?fmtTime(time):time+" s"}\n\n${missing.length?"Existem questões sem resposta. ":""}Deseja finalizar e calcular?`;
+   if(confirm(msg)){bypassFinalize=true;calc.click();setTimeout(()=>bypassFinalize=false,0)}
+ }
+ document.addEventListener("click",finalReview,true);
+ new MutationObserver(()=>decorateQuestions()).observe(document.body,{childList:true,subtree:true});
+ document.addEventListener("change",e=>{if(e.target.matches&&e.target.matches('#qs input[type=radio]')){const meta=jget(META,{});meta.changes=(meta.changes||0)+1;meta.lastChange=Date.now();jset(META,meta)}});
+ document.addEventListener("visibilitychange",()=>{const m=jget(META,{interruptions:[],awayMs:0});if(document.hidden)hiddenAt=Date.now();else if(hiddenAt){const d=Date.now()-hiddenAt;m.interruptions.push({at:new Date().toISOString(),ms:d});m.awayMs=(m.awayMs||0)+d;hiddenAt=0;jset(META,m)}});
+ document.getElementById("v10MapBtn").onclick=()=>{renderMap();document.getElementById("v10Map").classList.add("open")};
+ document.getElementById("v10MapClose").onclick=()=>document.getElementById("v10Map").classList.remove("open");
+ document.getElementById("v10FocusBtn").onclick=()=>document.body.classList.toggle("v10focus");
+ document.getElementById("v10HubBtn").onclick=()=>document.getElementById("v10Hub").classList.add("open");
+ document.getElementById("v10HubClose").onclick=()=>document.getElementById("v10Hub").classList.remove("open");
+ function content(h){document.getElementById("v10HubContent").innerHTML=h}
+ function escx(s){return String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]))}
+ document.getElementById("v10Timeline").onclick=()=>{
+   const h=allHist();content(`<div class="panel"><h3>📅 Linha do tempo</h3><div class="v10timeline">${h.length?h.slice(0,100).map(x=>`<div class="v10event"><b>${escx((x._test||"").toUpperCase())}</b> · ${escx(x.date||"sem data")}<br><small>${escx(x.out||x.summary||"")} · versão ${escx(x.systemVersion||x.schemaVersion||"legado")}</small></div>`).join(""):"Nenhuma aplicação."}</div></div>`)
+ };
+ document.getElementById("v10Stats").onclick=()=>{
+   const h=allHist(), full=h.filter(x=>!String(x.out||"").includes("PARCIAL")), partial=h.length-full.length, sec=h.reduce((a,x)=>a+(+x.time||0),0);
+   const by={};h.forEach(x=>by[x._test]=(by[x._test]||0)+1);
+   content(`<div class="panel"><h3>📊 Estatísticas pessoais</h3><div class="master-summary"><div><b>${h.length}</b><br>aplicações</div><div><b>${full.length}</b><br>completas</div><div><b>${partial}</b><br>parciais</div><div><b>${(sec/3600).toFixed(1)} h</b><br>registradas</div></div><p>${Object.entries(by).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join(" · ")||"Sem dados"}</p><p class="note">As estatísticas comparam sua própria atividade. Escalas de instrumentos diferentes não são tratadas como equivalentes.</p></div>`)
+ };
+ document.getElementById("v10Privacy").onclick=()=>{
+   const c=jget("psy_v10_privacy",{privateSession:false,autoLock:0});
+   content(`<div class="panel"><h3>🔐 Privacidade</h3><label><input id="v10Private" type="checkbox" style="width:auto" ${c.privateSession?"checked":""}> Sessão privada: novos registros podem ser descartados após a sessão</label><label>Bloqueio automático por inatividade (minutos; 0 desativa)<input id="v10LockMin" type="number" min="0" value="${c.autoLock||0}"></label><button id="v10SavePriv" class="primary">Salvar</button><p class="note">Os históricos permanecem no armazenamento local do navegador, salvo quando você exporta ou compartilha um arquivo.</p></div>`);
+   document.getElementById("v10SavePriv").onclick=()=>{jset("psy_v10_privacy",{privateSession:document.getElementById("v10Private").checked,autoLock:+document.getElementById("v10LockMin").value||0});alert("Privacidade atualizada.")};
+ };
+ function csv(){
+   const h=allHist(), rows=[["teste","data","resultado","resumo","tempo_s","versao"]];
+   h.forEach(x=>rows.push([x._test,x.date||"",x.out||"",x.summary||"",x.time||"",x.systemVersion||x.schemaVersion||""]));
+   return rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+ }
+ function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:type||"text/plain"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+ document.getElementById("v10Data").onclick=()=>{
+   content(`<div class="panel"><h3>📦 Dados e segurança</h3><button id="v10CSV">⬇️ Exportar CSV</button> <button id="v10JSON">⬇️ Exportar JSON por testes</button> <button id="v10Snap">📸 Criar snapshot</button> <button id="v10Dedup">🧹 Detectar duplicatas</button><p id="v10DataMsg" class="note"></p></div>`);
+   document.getElementById("v10CSV").onclick=()=>dl("historico-psicologico-v10.csv",csv(),"text/csv");
+   document.getElementById("v10JSON").onclick=()=>{const o={version:V,exported:new Date().toISOString(),tests:{}};["eata","ifp","bfp","neo","neoffi","palo"].forEach(t=>o.tests[t]=jget("psy_"+t,[]));dl("dados-seletivos-v10.json",JSON.stringify(o,null,2),"application/json")};
+   document.getElementById("v10Snap").onclick=()=>{const o={at:new Date().toISOString(),data:{}};for(let i=0;i<S.length;i++){const k=S.key(i);if(k&&k.startsWith("psy_"))o.data[k]=S.getItem(k)}jset(SNAP,o);document.getElementById("v10DataMsg").textContent="Snapshot interno criado em "+new Date().toLocaleString("pt-BR")};
+   document.getElementById("v10Dedup").onclick=()=>{const h=allHist(),seen=new Set(),dups=[];h.forEach(x=>{const k=x._test+"|"+(x.id||"")+"|"+(x.date||"");if(seen.has(k))dups.push(k);seen.add(k)});document.getElementById("v10DataMsg").textContent=dups.length?`${dups.length} possível(is) duplicata(s) detectada(s). Nenhum dado foi apagado.`:"Nenhuma duplicata óbvia detectada."};
+ };
+ document.getElementById("v10Dev").onclick=()=>{
+   const expected={eata:40,ifp:100,bfp:126,neo:240,neoffi:60}, names={eata:["eataQ"],ifp:["ifpQ"],bfp:["bfpQ"],neo:["neoQ"],neoffi:["neoffiQ","neoFfiQ"]};
+   let lines=[];for(const [t,n] of Object.entries(expected)){let a=null;for(const nm of names[t])if(Array.isArray(window[nm]))a=window[nm];lines.push(`${t.toUpperCase()}: ${a?a.length:"base encapsulada"} / esperado ${n}`)}
+   const errs=jget("psico_runtime_errors_v92",[]);
+   content(`<div class="panel"><h3>🛠️ Modo desenvolvedor</h3><pre style="white-space:pre-wrap">${escx(lines.join("\n"))}</pre><p>Erros registrados: ${errs.length}</p><button id="v10AuditTxt">📄 Exportar auditoria</button><p class="note">O diagnóstico não modifica pontuação nem critérios.</p></div>`);
+   document.getElementById("v10AuditTxt").onclick=()=>dl("auditoria-v10.txt",`PSICO SEGURANÇA V${V}\n${TODAY}\n\n${lines.join("\n")}\n\nHistóricos: ${allHist().length}\nErros: ${errs.length}`);
+ };
+ document.getElementById("v10About").onclick=()=>content(`<div class="panel"><h3>ℹ️ Sobre</h3><p><b>Psico Segurança · V${V}</b><br>Atualizado em ${TODAY}</p><p>Ferramenta educacional de treinamento para concursos da Segurança Pública. Não substitui avaliação psicológica, laudo ou decisão de psicólogo habilitado.</p><h4>V10</h4><p>Revisão final, mapa de questões, marcação para revisão, modo foco, registro de interrupções, estatísticas, linha do tempo, exportações, snapshots, detecção de duplicatas, central de privacidade, modo desenvolvedor e auditoria.</p><p class="note">Resultados “apto provável/inapto provável” em relatórios de IA são estimativas educacionais e devem respeitar a qualidade e suficiência dos dados.</p></div>`);
+ // Stamp records created through the core done()
+ if(typeof window.done==="function"){
+   const od=window.done;window.done=function(t,x,n){
+     const m=jget(META,{interruptions:[],awayMs:0,changes:0});
+     x.systemVersion=V;x.systemUpdated=TODAY;x.interruptions=m.interruptions||[];x.awayMs=m.awayMs||0;x.answerChanges=m.changes||0;
+     x.qualityGrade=(n&&window.currentCount&&n===window.currentCount&&x.awayMs<120000)?"A":(n&&window.currentCount&&n===window.currentCount)?"B":"D";
+     jset(META,{interruptions:[],awayMs:0,changes:0});return od(t,x,n)
+   }
+ }
+ // automatic structural self-check at startup
+ setTimeout(()=>{const bad=[];try{if(typeof D!=="undefined"&&D.ifpQ&&D.ifpQ.length!==100)bad.push("IFP "+D.ifpQ.length+"/100");if(typeof D!=="undefined"&&D.eataQ&&D.eataQ.length!==40)bad.push("EATA "+D.eataQ.length+"/40")}catch(e){}if(bad.length)alert("⚠️ Integridade: "+bad.join(", "))},900);
+})();
+</script>
+
 </body></html>`);w.document.close()}
 
 function evaluationCenter(){
@@ -1462,7 +1870,7 @@ document.querySelectorAll('[data-nav="evaluation"]').forEach(b=>b.addEventListen
 
 document.addEventListener('DOMContentLoaded',()=>{setupSettingsV9();setupDemoBadge()});
 
-</script><footer><div style="font-size:14px;font-weight:800;letter-spacing:.35px;line-height:1.5;margin-bottom:8px">FERRAMENTA DE TREINAMENTO. RESULTADOS SÃO REFERÊNCIAS DO SIMULADOR E NÃO CONSTITUEM AVALIAÇÃO, DIAGNÓSTICO, LAUDO OU RESULTADO OFICIAL.</div><div style="font-size:12px">Criação e adaptação - WPM</div><div class="vfooter-meta"><b>Versão 9.2</b> · Atualizado em 14/09/2026</div></footer>
+</script><footer><div style="font-size:14px;font-weight:800;letter-spacing:.35px;line-height:1.5;margin-bottom:8px">FERRAMENTA DE TREINAMENTO. RESULTADOS SÃO REFERÊNCIAS DO SIMULADOR E NÃO CONSTITUEM AVALIAÇÃO, DIAGNÓSTICO, LAUDO OU RESULTADO OFICIAL.</div><div style="font-size:12px">Criação e adaptação - WPM</div><div class="vfooter-meta"><b>Versão 10.0</b> · Atualizado em 14/09/2026</div></footer>
 <style>
 #reliabilityPanel{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99990;display:none;align-items:center;justify-content:center;padding:18px}
 #reliabilityPanel.open{display:flex}
@@ -1477,7 +1885,7 @@ document.addEventListener('DOMContentLoaded',()=>{setupSettingsV9();setupDemoBad
 <div id="reliabilityPanel" aria-hidden="true">
   <div class="rp-card">
     <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
-      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 9.2 · Atualizado em 14/09/2026</small></div>
+      <div><h2 style="margin:0">🛡️ Diagnóstico e integridade</h2><small>Versão 10.0 · Atualizado em 14/09/2026</small></div>
       <button type="button" id="rpClose">✕ Fechar</button>
     </div>
     <p>Verifica a estrutura dos testes, histórico, versões, backup e erros locais. Não altera respostas ao executar o diagnóstico.</p>
@@ -1624,6 +2032,142 @@ document.addEventListener('DOMContentLoaded',()=>{setupSettingsV9();setupDemoBad
   // Stamp version in common save payloads by exposing helper for future saves.
   window.PSICO_SYSTEM_VERSION=SYS_VERSION;
   window.psicoStampRecord=function(o){return Object.assign({},o,{systemVersion:SYS_VERSION,systemUpdated:UPDATED})};
+})();
+</script>
+
+
+<style id="v10style">
+:root{--v10good:#22c55e;--v10warn:#f59e0b;--v10bad:#ef4444}
+#v10Tools{position:fixed;left:14px;bottom:14px;z-index:9988;display:flex;gap:6px;flex-wrap:wrap}
+#v10Tools button{border-radius:999px;padding:8px 11px;font-size:11px}
+.v10modal{position:fixed;inset:0;background:rgba(0,0,0,.76);z-index:99998;display:none;align-items:center;justify-content:center;padding:14px}
+.v10modal.open{display:flex}.v10box{width:min(1000px,100%);max-height:90vh;overflow:auto;background:var(--surface,#111820);border:1px solid var(--line,#334155);border-radius:18px;padding:18px}
+.v10qmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;margin:12px 0}
+.v10qmap button{padding:9px 4px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--text)}
+.v10qmap button.answered{outline:2px solid var(--v10good)}.v10qmap button.flagged{box-shadow:inset 0 -4px 0 var(--v10warn)}
+.v10qmap button.missing{opacity:.55}.v10review{float:right;margin-left:8px;font-size:11px!important;padding:5px 7px!important}
+body.v10focus header,body.v10focus footer,body.v10focus #v10Tools,body.v10focus #reliabilityFab{display:none!important}
+body.v10focus main{max-width:900px;margin:auto}.v10status{display:inline-block;padding:4px 8px;border:1px solid var(--line);border-radius:999px;font-size:10px;font-weight:800}
+.v10timeline{display:grid;gap:8px}.v10event{border-left:3px solid var(--line);padding:8px 12px;background:var(--surface2);border-radius:0 10px 10px 0}
+.v10heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:4px}.v10heat span{padding:6px 2px;text-align:center;border-radius:6px;background:rgba(148,163,184,.12);font-size:10px}
+@media(max-width:720px){#v10Tools{left:8px;right:8px;bottom:8px}.v10box{padding:12px}.v10qmap{grid-template-columns:repeat(6,1fr)}}
+</style>
+<div id="v10Tools">
+ <button type="button" id="v10MapBtn">🗺️ Questões</button>
+ <button type="button" id="v10FocusBtn">👁️ Foco</button>
+ <button type="button" id="v10HubBtn">🧰 Central V10</button>
+</div>
+<div class="v10modal" id="v10Map"><div class="v10box"><div style="display:flex;justify-content:space-between;gap:10px"><h2>🗺️ Mapa e revisão</h2><button id="v10MapClose">✕</button></div><div id="v10MapStats"></div><div id="v10MapGrid" class="v10qmap"></div><p class="note">Contorno verde = respondida · marca inferior = revisar. O mapa não avalia se uma alternativa é adequada.</p></div></div>
+<div class="v10modal" id="v10Hub"><div class="v10box"><div style="display:flex;justify-content:space-between;gap:10px"><div><h2>🧰 Central V10</h2><small>Versão 10.0 · Atualizado em 14/09/2026</small></div><button id="v10HubClose">✕</button></div>
+<div class="grid" style="margin-top:12px">
+ <button class="cardbtn" id="v10Timeline"><h2>📅 Linha do tempo</h2><p>Aplicações e evolução cronológica</p></button>
+ <button class="cardbtn" id="v10Stats"><h2>📊 Estatísticas</h2><p>Frequência, completos/parciais e duração</p></button>
+ <button class="cardbtn" id="v10Privacy"><h2>🔐 Privacidade</h2><p>Sessão privada, bloqueio e dados</p></button>
+ <button class="cardbtn" id="v10Data"><h2>📦 Dados</h2><p>CSV, JSON seletivo, duplicatas e snapshots</p></button>
+ <button class="cardbtn" id="v10Dev"><h2>🛠️ Desenvolvedor</h2><p>Integridade, IDs, bases e auditoria</p></button>
+ <button class="cardbtn" id="v10About"><h2>ℹ️ Sobre</h2><p>Finalidade, limitações e changelog</p></button>
+</div><div id="v10HubContent" style="margin-top:14px"></div></div></div>
+<script>
+(function(){
+ const V="10.0", TODAY="14/09/2026";
+ const S=localStorage, FLAGS="psy_v10_flags", META="psy_v10_meta", SNAP="psy_v10_snapshot";
+ let bypassFinalize=false, hiddenAt=0;
+ function jget(k,d){try{return JSON.parse(S.getItem(k)||JSON.stringify(d))}catch(e){return d}}
+ function jset(k,v){S.setItem(k,JSON.stringify(v))}
+ function flags(){return jget(FLAGS,{})}
+ function allHist(){
+   const out=[];["eata","ifp","bfp","neo","neoffi","palo"].forEach(t=>{
+     let a=[];try{a=JSON.parse(S.getItem("psy_"+t)||"[]")}catch(e){}
+     a.forEach((x,i)=>out.push({...x,_test:t,_idx:i}));
+   }); return out.sort((a,b)=>(b.id||0)-(a.id||0));
+ }
+ function currentQuestions(){return [...document.querySelectorAll('#qs .q')]}
+ function currentRadios(){return [...document.querySelectorAll('#qs input[type=radio]')]}
+ function qStatus(){
+   const qs=currentQuestions(), f=flags(), t=window.currentTest||"test";
+   return qs.map((q,i)=>({i,answered:!!q.querySelector('input[type=radio]:checked'),flagged:!!f[t+"_"+i]}));
+ }
+ function renderMap(){
+   const a=qStatus(), grid=document.getElementById("v10MapGrid"), st=document.getElementById("v10MapStats");
+   if(!a.length){st.innerHTML='<p>Nenhum questionário aberto.</p>';grid.innerHTML='';return}
+   st.innerHTML=`<b>${a.filter(x=>x.answered).length}/${a.length} respondidas</b> · 🚩 ${a.filter(x=>x.flagged).length} marcadas para revisão`;
+   grid.innerHTML=a.map(x=>`<button data-i="${x.i}" class="${x.answered?'answered':'missing'} ${x.flagged?'flagged':''}">${x.i+1}</button>`).join("");
+   grid.querySelectorAll("button").forEach(b=>b.onclick=()=>{const q=currentQuestions()[+b.dataset.i];document.getElementById("v10Map").classList.remove("open");q&&q.scrollIntoView({behavior:"smooth",block:"center"})});
+ }
+ function decorateQuestions(){
+   const t=window.currentTest||"test", f=flags();
+   currentQuestions().forEach((q,i)=>{
+     if(q.querySelector(".v10review"))return;
+     const b=document.createElement("button");b.type="button";b.className="v10review secondary";b.textContent=f[t+"_"+i]?"🚩 Revisar":"⚑ Revisar";
+     b.onclick=()=>{const x=flags(),k=t+"_"+i;x[k]=!x[k];jset(FLAGS,x);b.textContent=x[k]?"🚩 Revisar":"⚑ Revisar"};
+     q.prepend(b);
+   });
+ }
+ function finalReview(e){
+   const calc=e.target.closest&&e.target.closest("#calc"); if(!calc||bypassFinalize)return;
+   const a=qStatus(); if(!a.length)return;
+   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+   const missing=a.filter(x=>!x.answered), marked=a.filter(x=>x.flagged);
+   const time=(typeof elapsed==="function"?elapsed():0);
+   const msg=`REVISÃO FINAL\n\nRespondidas: ${a.length-missing.length}/${a.length}\nNão respondidas: ${missing.length}\nMarcadas para revisar: ${marked.length}\nTempo: ${typeof fmtTime==="function"?fmtTime(time):time+" s"}\n\n${missing.length?"Existem questões sem resposta. ":""}Deseja finalizar e calcular?`;
+   if(confirm(msg)){bypassFinalize=true;calc.click();setTimeout(()=>bypassFinalize=false,0)}
+ }
+ document.addEventListener("click",finalReview,true);
+ new MutationObserver(()=>decorateQuestions()).observe(document.body,{childList:true,subtree:true});
+ document.addEventListener("change",e=>{if(e.target.matches&&e.target.matches('#qs input[type=radio]')){const meta=jget(META,{});meta.changes=(meta.changes||0)+1;meta.lastChange=Date.now();jset(META,meta)}});
+ document.addEventListener("visibilitychange",()=>{const m=jget(META,{interruptions:[],awayMs:0});if(document.hidden)hiddenAt=Date.now();else if(hiddenAt){const d=Date.now()-hiddenAt;m.interruptions.push({at:new Date().toISOString(),ms:d});m.awayMs=(m.awayMs||0)+d;hiddenAt=0;jset(META,m)}});
+ document.getElementById("v10MapBtn").onclick=()=>{renderMap();document.getElementById("v10Map").classList.add("open")};
+ document.getElementById("v10MapClose").onclick=()=>document.getElementById("v10Map").classList.remove("open");
+ document.getElementById("v10FocusBtn").onclick=()=>document.body.classList.toggle("v10focus");
+ document.getElementById("v10HubBtn").onclick=()=>document.getElementById("v10Hub").classList.add("open");
+ document.getElementById("v10HubClose").onclick=()=>document.getElementById("v10Hub").classList.remove("open");
+ function content(h){document.getElementById("v10HubContent").innerHTML=h}
+ function escx(s){return String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]))}
+ document.getElementById("v10Timeline").onclick=()=>{
+   const h=allHist();content(`<div class="panel"><h3>📅 Linha do tempo</h3><div class="v10timeline">${h.length?h.slice(0,100).map(x=>`<div class="v10event"><b>${escx((x._test||"").toUpperCase())}</b> · ${escx(x.date||"sem data")}<br><small>${escx(x.out||x.summary||"")} · versão ${escx(x.systemVersion||x.schemaVersion||"legado")}</small></div>`).join(""):"Nenhuma aplicação."}</div></div>`)
+ };
+ document.getElementById("v10Stats").onclick=()=>{
+   const h=allHist(), full=h.filter(x=>!String(x.out||"").includes("PARCIAL")), partial=h.length-full.length, sec=h.reduce((a,x)=>a+(+x.time||0),0);
+   const by={};h.forEach(x=>by[x._test]=(by[x._test]||0)+1);
+   content(`<div class="panel"><h3>📊 Estatísticas pessoais</h3><div class="master-summary"><div><b>${h.length}</b><br>aplicações</div><div><b>${full.length}</b><br>completas</div><div><b>${partial}</b><br>parciais</div><div><b>${(sec/3600).toFixed(1)} h</b><br>registradas</div></div><p>${Object.entries(by).map(([k,v])=>`${k.toUpperCase()}: ${v}`).join(" · ")||"Sem dados"}</p><p class="note">As estatísticas comparam sua própria atividade. Escalas de instrumentos diferentes não são tratadas como equivalentes.</p></div>`)
+ };
+ document.getElementById("v10Privacy").onclick=()=>{
+   const c=jget("psy_v10_privacy",{privateSession:false,autoLock:0});
+   content(`<div class="panel"><h3>🔐 Privacidade</h3><label><input id="v10Private" type="checkbox" style="width:auto" ${c.privateSession?"checked":""}> Sessão privada: novos registros podem ser descartados após a sessão</label><label>Bloqueio automático por inatividade (minutos; 0 desativa)<input id="v10LockMin" type="number" min="0" value="${c.autoLock||0}"></label><button id="v10SavePriv" class="primary">Salvar</button><p class="note">Os históricos permanecem no armazenamento local do navegador, salvo quando você exporta ou compartilha um arquivo.</p></div>`);
+   document.getElementById("v10SavePriv").onclick=()=>{jset("psy_v10_privacy",{privateSession:document.getElementById("v10Private").checked,autoLock:+document.getElementById("v10LockMin").value||0});alert("Privacidade atualizada.")};
+ };
+ function csv(){
+   const h=allHist(), rows=[["teste","data","resultado","resumo","tempo_s","versao"]];
+   h.forEach(x=>rows.push([x._test,x.date||"",x.out||"",x.summary||"",x.time||"",x.systemVersion||x.schemaVersion||""]));
+   return rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+ }
+ function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:type||"text/plain"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+ document.getElementById("v10Data").onclick=()=>{
+   content(`<div class="panel"><h3>📦 Dados e segurança</h3><button id="v10CSV">⬇️ Exportar CSV</button> <button id="v10JSON">⬇️ Exportar JSON por testes</button> <button id="v10Snap">📸 Criar snapshot</button> <button id="v10Dedup">🧹 Detectar duplicatas</button><p id="v10DataMsg" class="note"></p></div>`);
+   document.getElementById("v10CSV").onclick=()=>dl("historico-psicologico-v10.csv",csv(),"text/csv");
+   document.getElementById("v10JSON").onclick=()=>{const o={version:V,exported:new Date().toISOString(),tests:{}};["eata","ifp","bfp","neo","neoffi","palo"].forEach(t=>o.tests[t]=jget("psy_"+t,[]));dl("dados-seletivos-v10.json",JSON.stringify(o,null,2),"application/json")};
+   document.getElementById("v10Snap").onclick=()=>{const o={at:new Date().toISOString(),data:{}};for(let i=0;i<S.length;i++){const k=S.key(i);if(k&&k.startsWith("psy_"))o.data[k]=S.getItem(k)}jset(SNAP,o);document.getElementById("v10DataMsg").textContent="Snapshot interno criado em "+new Date().toLocaleString("pt-BR")};
+   document.getElementById("v10Dedup").onclick=()=>{const h=allHist(),seen=new Set(),dups=[];h.forEach(x=>{const k=x._test+"|"+(x.id||"")+"|"+(x.date||"");if(seen.has(k))dups.push(k);seen.add(k)});document.getElementById("v10DataMsg").textContent=dups.length?`${dups.length} possível(is) duplicata(s) detectada(s). Nenhum dado foi apagado.`:"Nenhuma duplicata óbvia detectada."};
+ };
+ document.getElementById("v10Dev").onclick=()=>{
+   const expected={eata:40,ifp:100,bfp:126,neo:240,neoffi:60}, names={eata:["eataQ"],ifp:["ifpQ"],bfp:["bfpQ"],neo:["neoQ"],neoffi:["neoffiQ","neoFfiQ"]};
+   let lines=[];for(const [t,n] of Object.entries(expected)){let a=null;for(const nm of names[t])if(Array.isArray(window[nm]))a=window[nm];lines.push(`${t.toUpperCase()}: ${a?a.length:"base encapsulada"} / esperado ${n}`)}
+   const errs=jget("psico_runtime_errors_v92",[]);
+   content(`<div class="panel"><h3>🛠️ Modo desenvolvedor</h3><pre style="white-space:pre-wrap">${escx(lines.join("\n"))}</pre><p>Erros registrados: ${errs.length}</p><button id="v10AuditTxt">📄 Exportar auditoria</button><p class="note">O diagnóstico não modifica pontuação nem critérios.</p></div>`);
+   document.getElementById("v10AuditTxt").onclick=()=>dl("auditoria-v10.txt",`PSICO SEGURANÇA V${V}\n${TODAY}\n\n${lines.join("\n")}\n\nHistóricos: ${allHist().length}\nErros: ${errs.length}`);
+ };
+ document.getElementById("v10About").onclick=()=>content(`<div class="panel"><h3>ℹ️ Sobre</h3><p><b>Psico Segurança · V${V}</b><br>Atualizado em ${TODAY}</p><p>Ferramenta educacional de treinamento para concursos da Segurança Pública. Não substitui avaliação psicológica, laudo ou decisão de psicólogo habilitado.</p><h4>V10</h4><p>Revisão final, mapa de questões, marcação para revisão, modo foco, registro de interrupções, estatísticas, linha do tempo, exportações, snapshots, detecção de duplicatas, central de privacidade, modo desenvolvedor e auditoria.</p><p class="note">Resultados “apto provável/inapto provável” em relatórios de IA são estimativas educacionais e devem respeitar a qualidade e suficiência dos dados.</p></div>`);
+ // Stamp records created through the core done()
+ if(typeof window.done==="function"){
+   const od=window.done;window.done=function(t,x,n){
+     const m=jget(META,{interruptions:[],awayMs:0,changes:0});
+     x.systemVersion=V;x.systemUpdated=TODAY;x.interruptions=m.interruptions||[];x.awayMs=m.awayMs||0;x.answerChanges=m.changes||0;
+     x.qualityGrade=(n&&window.currentCount&&n===window.currentCount&&x.awayMs<120000)?"A":(n&&window.currentCount&&n===window.currentCount)?"B":"D";
+     jset(META,{interruptions:[],awayMs:0,changes:0});return od(t,x,n)
+   }
+ }
+ // automatic structural self-check at startup
+ setTimeout(()=>{const bad=[];try{if(typeof D!=="undefined"&&D.ifpQ&&D.ifpQ.length!==100)bad.push("IFP "+D.ifpQ.length+"/100");if(typeof D!=="undefined"&&D.eataQ&&D.eataQ.length!==40)bad.push("EATA "+D.eataQ.length+"/40")}catch(e){}if(bad.length)alert("⚠️ Integridade: "+bad.join(", "))},900);
 })();
 </script>
 
