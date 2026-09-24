@@ -1,0 +1,60 @@
+/* V10.1 — camada de estabilização visual */
+:root{
+  --ui-bg:#0b1118;
+  --ui-panel:#111c27;
+  --ui-panel-2:#172635;
+  --ui-text:#e7edf3;
+  --ui-muted:#94a3b3;
+  --ui-border:rgba(148,163,179,.18);
+}
+
+html{overflow-x:clip}
+body{overflow-x:clip;padding-bottom:76px}
+header{position:sticky!important;top:0;z-index:100;background:rgba(11,17,24,.95)}
+main{width:100%;max-width:1100px}
+.cardbtn{min-height:145px!important;padding:22px!important}
+.cardbtn h2{line-height:1.15}
+.q{overflow:visible}
+.v10review{float:none!important;display:inline-flex!important;margin:0 0 10px 0!important}
+.v10modal{overscroll-behavior:contain}
+.v10box{max-width:min(1000px,calc(100vw - 28px));box-sizing:border-box}
+body.modal-open{overflow:hidden!important}
+#v10Tools{max-width:calc(100vw - 28px)}
+.tablewrap{max-width:100%}
+
+/* Se algum bloco legado duplicado escapar da sanitização do SW, não o exibe. */
+body.v10focus main{padding-top:12px}
+
+@media(max-width:720px){
+  body{padding-bottom:92px}
+  header{padding:10px 12px!important}
+  main{padding:14px 10px 40px!important}
+  .grid,.settings{grid-template-columns:1fr!important}
+  .cardbtn{min-height:120px!important;padding:16px!important;border-radius:12px!important}
+  .cardbtn h2{font-size:21px!important}
+  .cardbtn p{font-size:13px;line-height:1.4}
+  .profile{grid-template-columns:1fr!important}
+  .stats,.metrics,.dashboard{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .actions button{width:100%;min-height:46px}
+  .opts{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
+  .opts label{flex:1 1 52px;min-width:48px;min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center}
+  .tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  .tabs button{flex:0 0 auto;white-space:nowrap;min-height:44px}
+  #v10Tools{left:8px!important;right:8px!important;bottom:max(8px,env(safe-area-inset-bottom))!important;justify-content:center}
+  #v10Tools button{flex:1 1 auto;min-height:42px}
+  .v10box{width:calc(100vw - 20px)!important;max-height:88dvh!important;padding:12px!important}
+  .v10qmap{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+  .tablewrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+  table{min-width:620px}
+}
+
+@media(max-width:390px){
+  .actions{grid-template-columns:1fr}
+  .stats,.metrics,.dashboard{grid-template-columns:1fr 1fr!important}
+  #v10Tools button{font-size:10px!important;padding:8px 6px!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
