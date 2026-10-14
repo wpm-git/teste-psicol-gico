@@ -1,23 +1,20 @@
-const CACHE='psico-v11';
-const ASSETS=['./','./index.html','./manifest.webmanifest','./icon.svg','./norm-fix.js'];
-self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
-self.addEventListener('activate',e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k))))])));
-self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET')return;
-  const u=new URL(e.request.url);
-  const isHtml=e.request.mode==='navigate'||u.pathname.endsWith('/')||u.pathname.endsWith('/index.html');
+const CACHE='psico-v12';
+const ASSETS=['./index.html','./manifest.webmanifest','./icon.svg'];
+self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)))});
+self.addEventListener('activate',event=>{event.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))]))});
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET')return;
+  const url=new URL(event.request.url);
+  if(url.origin!==self.location.origin)return;
+  const isHtml=event.request.mode==='navigate'||url.pathname.endsWith('/')||url.pathname.endsWith('/index.html');
   if(isHtml){
-    e.respondWith(fetch(e.request,{cache:'no-store'}).then(async r=>{
-      const type=r.headers.get('content-type')||'';
-      if(!type.includes('text/html'))return r;
-      let html=await r.text();
-      if(!html.includes('norm-fix.js'))html=html.replace(/<\/body>/i,'<script src="./norm-fix.js"></script></body>');
-      const h=new Headers(r.headers);h.delete('content-length');
-      const response=new Response(html,{status:r.status,statusText:r.statusText,headers:h});
-      const clone=response.clone();caches.open(CACHE).then(c=>c.put('./index.html',clone));
+    event.respondWith(fetch(event.request,{cache:'no-store'}).then(response=>{
+      if(response.ok&&response.headers.get('content-type')?.includes('text/html')){
+        const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put('./index.html',copy)));
+      }
       return response;
     }).catch(()=>caches.match('./index.html')));
     return;
   }
-  e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(x=>{const y=x.clone();caches.open(CACHE).then(c=>c.put(e.request,y));return x})));
+  event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request)));
 });
